@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#1a1a3e"/>
+  <path d="M46 148 L46 88 Q46 82 52 82 L93 88 L93 148 Z" fill="#C8B8FF" opacity="0.85"/>
+  <path d="M146 148 L146 88 Q146 82 140 82 L99 88 L99 148 Z" fill="#C8B8FF" opacity="0.6"/>
+  <line x1="96" y1="90" x2="96" y2="148" stroke="#7C5CFF" stroke-width="2"/>
+  <path d="M96 48 C96 48 80 66 80 80 C80 91 87 98 96 98 C105 98 112 91 112 80 C112 66 96 48 96 48Z" fill="#EF9F27"/>
+  <path d="M96 62 C96 62 88 73 88 80 C88 87 91.5 92 96 92 C100.5 92 104 87 104 80 C104 73 96 62 96 62Z" fill="#FFFBF0"/>
+  <path d="M156 16 L160 28 L172 28 L163 36 L166 48 L156 40 L146 48 L149 36 L140 28 L152 28 Z" fill="#EF9F27"/>
+  <rect x="56" y="150" width="80" height="18" rx="9" fill="#EF9F27"/>
+  <text x="96" y="163" font-family="Arial,sans-serif" font-size="9" font-weight="700" fill="#1a1a3e" text-anchor="middle" letter-spacing="1">MANAGER</text>
+  <text x="96" y="185" font-family="Georgia,serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="3">HASKE</text>
+</svg>

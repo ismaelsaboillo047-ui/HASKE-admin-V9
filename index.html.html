@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haske Admin — Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
+  --amber: #EF9F27; --amber-light: #FAEEDA; --amber-dark: #854F0B;
+  --blue: #378ADD; --blue-light: #E6F1FB; --blue-dark: #185FA5;
+  --red: #E24B4A; --red-light: #FCEBEB;
+  --bg: #f4f3f0; --bg2: #ffffff; --sidebar: #0F6E56;
+  --border: rgba(0,0,0,0.09); --text: #1a1a18; --text2: #6b6a66;
+  --radius: 10px; --shadow: 0 1px 12px rgba(0,0,0,0.07);
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+#s-login { display:flex; align-items:center; justify-content:center; min-height:100vh; background: var(--sidebar); }
+.login-box { background: var(--bg2); border-radius: 16px; padding: 2.5rem; width: 340px; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+.login-logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--green); font-weight: 700; margin-bottom: 4px; }
+.login-sub { font-size: 12px; color: var(--text2); margin-bottom: 2rem; }
+.lf { display:flex; flex-direction:column; gap:5px; margin-bottom:1rem; }
+.lf label { font-size:12px; font-weight:500; color:var(--text2); }
+.lf input { border:1px solid var(--border); border-radius:8px; padding:0.7rem 1rem; font-size:14px; font-family:'DM Sans',sans-serif; outline:none; }
+.lf input:focus { border-color:var(--green); }
+.btn-login { width:100%; padding:0.85rem; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; font-family:'DM Sans',sans-serif; cursor:pointer; margin-top:0.5rem; }
+.btn-login:hover { background:var(--green-dark); }
+.err-login { color:#E24B4A; font-size:12px; text-align:center; margin-top:0.75rem; display:none; }
+#s-app { display:none; min-height:100vh; }
+.layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+.sidebar { background:var(--sidebar); color:#fff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.sidebar-logo { padding:1.5rem 1.25rem 1rem; border-bottom:1px solid rgba(255,255,255,0.1); }
+.brand { font-family:'Playfair Display',serif; font-size:22px; color:#fff; font-weight:700; }
+.brand-sub { font-size:10px; color:rgba(255,255,255,0.55); margin-top:2px; text-transform:uppercase; letter-spacing:0.07em; }
+.sidebar-nav { flex:1; padding:1rem 0; }
+.nav-item { display:flex; align-items:center; gap:0.7rem; padding:0.7rem 1.25rem; font-size:13px; color:rgba(255,255,255,0.7); cursor:pointer; border-left:3px solid transparent; transition:all 0.15s; }
+.nav-item:hover { color:#fff; background:rgba(255,255,255,0.07); }
+.nav-item.active { color:#fff; background:rgba(255,255,255,0.12); border-left-color:#fff; font-weight:500; }
+.nav-item i { font-size:18px; }
+.nav-badge { margin-left:auto; background:var(--amber); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; min-width:20px; text-align:center; }
+.sidebar-user { padding:1rem 1.25rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:0.65rem; }
+.s-av { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:500; }
+.s-uname { font-size:12px; color:#fff; font-weight:500; }
+.s-urole { font-size:10px; color:rgba(255,255,255,0.55); }
+.logout-lnk { margin-left:auto; color:rgba(255,255,255,0.5); font-size:18px; cursor:pointer; }
+.logout-lnk:hover { color:#fff; }
+.main { padding:2rem; overflow-y:auto; }
+.page { display:none; }
+.page.active { display:block; }
+.page-title { font-family:'Playfair Display',serif; font-size:22px; font-weight:600; margin-bottom:0.25rem; }
+.page-sub { font-size:13px; color:var(--text2); margin-bottom:1.5rem; }
+.live { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--green); }
+.live::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem; }
+.stat { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.25rem; box-shadow:var(--shadow); }
+.stat .num { font-size:28px; font-weight:500; }
+.stat .lbl { font-size:12px; color:var(--text2); margin-top:3px; }
+.c-green{color:var(--green);} .c-amber{color:var(--amber);} .c-blue{color:var(--blue);} .c-red{color:var(--red);}
+.table-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; margin-bottom:1rem; }
+.table-toolbar { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; border-bottom:1px solid var(--border); }
+.search-input { flex:1; border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.9rem; font-size:13px; font-family:'DM Sans',sans-serif; background:var(--bg); outline:none; }
+.search-input:focus { border-color:var(--green); }
+.fsel { border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.75rem; font-size:12px; font-family:'DM Sans',sans-serif; background:var(--bg); outline:none; color:var(--text2); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { text-align:left; padding:0.7rem 1rem; font-size:11px; font-weight:500; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); background:var(--bg); }
+tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--green-light); }
+tbody td { padding:0.85rem 1rem; vertical-align:middle; }
+.av { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:500; flex-shrink:0; }
+.av-g{background:var(--green-light);color:var(--green-dark);}
+.av-b{background:var(--blue-light);color:var(--blue-dark);}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.b-green{background:var(--green-light);color:var(--green-dark);}
+.b-amber{background:var(--amber-light);color:var(--amber-dark);}
+.b-blue{background:var(--blue-light);color:var(--blue-dark);}
+.b-red{background:var(--red-light);color:var(--red);}
+.ab{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;border:none;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;margin-right:3px;}
+.ab-v{background:var(--green-light);color:var(--green-dark);}
+.ab-v:hover{background:var(--green);color:#fff;}
+.ab-r{background:var(--red-light);color:var(--red);}
+.ab-r:hover{background:var(--red);color:#fff;}
+.ab-w{background:#E8F9F0;color:#128C7E;}
+.ab-w:hover{background:#25D366;color:#fff;}
+.empty-t{text-align:center;padding:3rem 1rem;color:var(--text2);}
+.empty-t i{font-size:40px;opacity:0.2;display:block;margin-bottom:0.75rem;}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal-ov.open{display:flex;}
+.modal{background:var(--bg2);border-radius:14px;padding:2rem;max-width:480px;width:100%;position:relative;max-height:85vh;overflow-y:auto;}
+.modal-x{position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:20px;color:var(--text2);cursor:pointer;}
+.modal h3{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:1.25rem;}
+.drow{display:flex;gap:0.5rem;padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:13px;}
+.drow:last-child{border-bottom:none;}
+.dlbl{color:var(--text2);min-width:130px;flex-shrink:0;}
+.dval{color:var(--text);font-weight:500;word-break:break-word;}
+.modal-acts{display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;}
+.bm{flex:1;padding:0.7rem;border:none;border-radius:8px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.bm-v{background:var(--green);color:#fff;}
+.bm-r{background:var(--red-light);color:var(--red);border:1px solid var(--red);}
+.bm-r:hover{background:var(--red);color:#fff;}
+.bm-w{background:#25D366;color:#fff;}
+
+/* PARAMÈTRES ADMIN */
+.params-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; box-shadow:var(--shadow); margin-bottom:1rem; }
+.params-title { font-size:14px; font-weight:500; margin-bottom:1.25rem; display:flex; align-items:center; gap:8px; color:var(--text); }
+.params-title i { color:var(--green); font-size:20px; }
+.pf { display:flex; flex-direction:column; gap:5px; margin-bottom:1rem; }
+.pf label { font-size:12px; font-weight:500; color:var(--text2); }
+.pf input, .pf select { border:1px solid var(--border); border-radius:8px; padding:0.65rem 0.9rem; font-size:13px; font-family:'DM Sans',sans-serif; background:var(--bg); outline:none; }
+.pf input:focus, .pf select:focus { border-color:var(--green); background:#fff; }
+.btn-save { display:inline-flex; align-items:center; gap:6px; padding:0.65rem 1.5rem; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:500; font-family:'DM Sans',sans-serif; cursor:pointer; }
+.btn-save:hover { background:var(--green-dark); }
+
+/* STATS CHART */
+.chart-bar { height: 8px; border-radius: 4px; background: var(--green); margin-top: 4px; transition: width 0.5s; }
+
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--text);color:#fff;padding:0.75rem 1.25rem;border-radius:8px;font-size:13px;z-index:999;opacity:0;transform:translateY(10px);transition:all 0.3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+@media(max-width:768px){.layout{grid-template-columns:1fr;}.sidebar{display:none;}.stats-grid{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login">
+  <div class="login-box">
+    <div class="login-logo">Haske</div>
+    <div class="login-sub">Espace Manager · Accès privé</div>
+    <div class="lf"><label>Identifiant</label><input type="text" id="l-id" placeholder="Identifiant admin"></div>
+    <div class="lf"><label>Mot de passe</label><input type="password" id="l-pw" placeholder="••••••••"></div>
+    <button class="btn-login" id="btn-login">Accéder au dashboard</button>
+    <div class="err-login" id="err-login">Identifiant ou mot de passe incorrect</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="s-app">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><div class="brand">Haske</div><div class="brand-sub">Manager · Admin</div></div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" id="nav-home" onclick="goPage('home')"><i class="ti ti-layout-dashboard"></i> Vue d'ensemble</div>
+        <div class="nav-item" id="nav-collaborateurs" onclick="goPage('collaborateurs')"><i class="ti ti-users"></i> Collaborateurs <span class="nav-badge" id="badge-c">0</span></div>
+        <div class="nav-item" id="nav-parents" onclick="goPage('parents')"><i class="ti ti-heart"></i> Parents <span class="nav-badge" id="badge-p">0</span></div>
+        <div class="nav-item" id="nav-match" onclick="goPage('match')"><i class="ti ti-arrows-exchange"></i> Mise en relation</div>
+        <div class="nav-item" id="nav-validation" onclick="goPage('validation')"><i class="ti ti-clipboard-check"></i> Matières à valider <span class="nav-badge" id="badge-validation">0</span></div>
+        <div class="nav-item" id="nav-preuves" onclick="goPage('preuves')"><i class="ti ti-file-check"></i> Preuves de séances <span class="nav-badge" id="badge-preuves">0</span></div>
+        <div class="nav-item" id="nav-mdp" onclick="goPage('mdp')"><i class="ti ti-lock"></i> Mots de passe <span class="nav-badge" id="badge-mdp">0</span></div>
+        <div class="nav-item" id="nav-stats" onclick="goPage('stats')"><i class="ti ti-chart-bar"></i> Statistiques</div>
+        <div class="nav-item" id="nav-params" onclick="goPage('params')"><i class="ti ti-settings"></i> Paramètres</div>
+      </nav>
+      <div class="sidebar-user">
+        <div class="s-av" id="s-av-init">M</div>
+        <div><div class="s-uname" id="s-uname">Manager</div><div class="s-urole">Haske Niger</div></div>
+        <i class="ti ti-logout logout-lnk" onclick="doLogout()"></i>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <!-- HOME -->
+      <div class="page active" id="page-home">
+        <div class="page-title">Vue d'ensemble</div>
+        <div class="page-sub"><span class="live">Synchronisation temps réel</span></div>
+        <div class="stats-grid">
+          <div class="stat"><div class="num c-blue" id="st-total">—</div><div class="lbl">Inscriptions totales</div></div>
+          <div class="stat"><div class="num c-amber" id="st-attente">—</div><div class="lbl">En attente</div></div>
+          <div class="stat"><div class="num c-green" id="st-valides">—</div><div class="lbl">Validés</div></div>
+          <div class="stat"><div class="num c-green" id="st-matches">0</div><div class="lbl">Mises en relation</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-toolbar"><div style="font-size:13px;font-weight:500;">Dernières inscriptions</div></div>
+          <table><thead><tr><th>Nom</th><th>Type</th><th>Ville</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="tbody-home"></tbody></table>
+          <div class="empty-t" id="empty-home" style="display:none;"><i class="ti ti-users"></i><p>Aucune inscription pour l'instant.<br>Les inscriptions apparaîtront ici automatiquement.</p></div>
+        </div>
+      </div>
+
+      <!-- COLLABORATEURS -->
+      <div class="page" id="page-collaborateurs">
+        <div class="page-title">Collaborateurs</div>
+        <div class="page-sub"><span class="live">Temps réel</span></div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input class="search-input" placeholder="Rechercher un collaborateur…" oninput="filterC(this.value)">
+            <select class="fsel" onchange="filterCs(this.value)"><option value="">Tous</option><option value="attente">En attente</option><option value="valide">Validés</option><option value="refuse">Refusés</option></select>
+          </div>
+          <table><thead><tr><th>Collaborateur</th><th>Université</th><th>Niveau</th><th>Niveaux/Matières</th><th>Dispo</th><th>Téléphone</th><th>Inscrit le</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="tbody-c"></tbody></table>
+          <div class="empty-t" id="empty-c" style="display:none;"><i class="ti ti-users"></i><p>Aucun collaborateur inscrit.</p></div>
+        </div>
+      </div>
+
+      <!-- PARENTS -->
+      <div class="page" id="page-parents">
+        <div class="page-title">Parents d'élèves</div>
+        <div class="page-sub"><span class="live">Temps réel</span></div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input class="search-input" placeholder="Rechercher un parent…" oninput="filterP(this.value)">
+            <select class="fsel" onchange="filterPs(this.value)"><option value="">Tous</option><option value="attente">En attente</option><option value="valide">Validés</option><option value="refuse">Refusés</option></select>
+          </div>
+          <table><thead><tr><th>Parent</th><th>Enfant</th><th>Classe</th><th>Matières</th><th>Dispo enfant</th><th>Téléphone</th><th>Inscrit le</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="tbody-p"></tbody></table>
+          <div class="empty-t" id="empty-p" style="display:none;"><i class="ti ti-heart"></i><p>Aucun parent inscrit.</p></div>
+        </div>
+      </div>
+
+      <!-- MATCH -->
+      <div class="page" id="page-match">
+        <div class="page-title">Mise en relation</div>
+        <div class="page-sub">Associe un collaborateur validé à un parent validé</div>
+        <div style="background:var(--amber-light);border:1px solid var(--amber);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:13px;color:var(--amber-dark);display:flex;gap:0.75rem;align-items:center;">
+          <i class="ti ti-info-circle" style="font-size:18px;flex-shrink:0;"></i>
+          Sélectionne un collaborateur et un parent, puis clique "Mettre en relation". Un message WhatsApp complet sera généré.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+          <div><div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"><i class="ti ti-users"></i> Collaborateurs validés</div><div id="match-c-list"></div></div>
+          <div><div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"><i class="ti ti-heart"></i> Parents validés</div><div id="match-p-list"></div></div>
+        </div>
+        <button id="btn-match" onclick="doMatch()" disabled style="width:100%;padding:0.75rem;background:var(--amber);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <i class="ti ti-arrows-exchange"></i> Mettre en relation
+        </button>
+        <div id="match-result" style="display:none;margin-top:1rem;background:var(--green-light);border:1px solid var(--green);border-radius:var(--radius);padding:1.25rem;">
+          <div style="font-size:13px;font-weight:500;color:var(--green-dark);margin-bottom:0.5rem;"><i class="ti ti-check"></i> Mis en relation !</div>
+          <div style="font-size:12px;margin-bottom:0.75rem;" id="match-sum"></div>
+          <a id="match-wa" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:0.6rem 1.25rem;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;"><i class="ti ti-brand-whatsapp"></i> Contacter le collaborateur sur WhatsApp</a>
+        </div>
+        <!-- Historique mises en relation -->
+        <div style="margin-top:1.5rem;">
+          <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Historique des mises en relation</div>
+          <div class="table-card">
+            <table><thead><tr><th>Collaborateur</th><th>Parent</th><th>Enfant</th><th>Classe</th><th>Matières</th><th>Date</th><th>Heure</th></tr></thead>
+            <tbody id="tbody-matches"></tbody></table>
+            <div class="empty-t" id="empty-matches" style="display:none;"><i class="ti ti-arrows-exchange"></i><p>Aucune mise en relation effectuée.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MATIÈRES À VALIDER -->
+      <div class="page" id="page-validation">
+        <div class="page-title">Matières à valider</div>
+        <div class="page-sub"><span class="live">Entretien et/ou test pédagogique requis avant validation</span></div>
+        <div class="table-card">
+          <table><thead><tr><th>Collaborateur</th><th>Matière</th><th>Téléphone</th><th>Type</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="tbody-validation"></tbody></table>
+          <div class="empty-t" id="empty-validation" style="display:none;"><i class="ti ti-clipboard-check"></i><p>Aucune matière en attente de validation.</p></div>
+        </div>
+      </div>
+
+      <!-- PREUVES DE SÉANCES -->
+      <div class="page" id="page-preuves">
+        <div class="page-title">Preuves de séances</div>
+        <div class="page-sub"><span class="live">Déclarations envoyées par les collaborateurs et les parents</span></div>
+        <div class="table-card">
+          <table><thead><tr><th>Auteur</th><th>Rôle</th><th>Date du cours</th><th>Heures</th><th>Note</th><th>Commentaire</th><th>Envoyé le</th></tr></thead>
+          <tbody id="tbody-preuves"></tbody></table>
+          <div class="empty-t" id="empty-preuves" style="display:none;"><i class="ti ti-file-check"></i><p>Aucune preuve de séance envoyée.</p></div>
+        </div>
+      </div>
+
+      <!-- MOTS DE PASSE -->
+      <div class="page" id="page-mdp">
+        <div class="page-title">Demandes de mot de passe oublié</div>
+        <div class="page-sub"><span class="live">Temps réel</span></div>
+        <div class="table-card">
+          <table><thead><tr><th>Nom</th><th>Identifiant</th><th>Téléphone</th><th>Date de la demande</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="tbody-mdp"></tbody></table>
+          <div class="empty-t" id="empty-mdp" style="display:none;"><i class="ti ti-lock"></i><p>Aucune demande de mot de passe en attente.</p></div>
+        </div>
+      </div>
+
+      <!-- STATISTIQUES -->
+      <div class="page" id="page-stats">
+        <div class="page-title">Statistiques</div>
+        <div class="page-sub">Vue analytique de la plateforme Haske</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+          <div class="table-card" style="padding:1.25rem;">
+            <div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Répartition par ville</div>
+            <div id="stats-villes"></div>
+          </div>
+          <div class="table-card" style="padding:1.25rem;">
+            <div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Matières les plus demandées</div>
+            <div id="stats-matieres"></div>
+          </div>
+        </div>
+        <div class="table-card" style="padding:1.25rem;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Taux de validation</div>
+          <div id="stats-taux"></div>
+        </div>
+      </div>
+
+      <!-- PARAMÈTRES -->
+      <div class="page" id="page-params">
+        <div class="page-title">Paramètres</div>
+        <div class="page-sub">Gérer ton compte manager Haske</div>
+
+        <div class="params-card">
+          <div class="params-title"><i class="ti ti-user-edit"></i> Modifier l'identifiant</div>
+          <div class="pf"><label>Nouvel identifiant</label><input type="text" id="new-id" placeholder="Ex : manager_haske"></div>
+          <button class="btn-save" onclick="saveId()"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+        </div>
+
+        <div class="params-card">
+          <div class="params-title"><i class="ti ti-lock"></i> Changer le mot de passe</div>
+          <div class="pf"><label>Mot de passe actuel</label><input type="password" id="old-pw" placeholder="••••••••"></div>
+          <div class="pf"><label>Nouveau mot de passe</label><input type="password" id="new-pw" placeholder="Min. 6 caractères"></div>
+          <div class="pf"><label>Confirmer le nouveau mot de passe</label><input type="password" id="new-pw2" placeholder="Répéter"></div>
+          <button class="btn-save" onclick="savePw()"><i class="ti ti-lock-check"></i> Changer le mot de passe</button>
+        </div>
+
+        <div class="params-card">
+          <div class="params-title"><i class="ti ti-palette"></i> Apparence</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;">
+            <div><div style="font-size:13px;">Nom affiché dans la sidebar</div><div style="font-size:11px;color:var(--text2);">Visible uniquement par toi</div></div>
+            <input type="text" id="display-name" placeholder="Manager" style="border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.9rem;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:160px;" oninput="updateDisplayName(this.value)">
+          </div>
+        </div>
+
+        <div class="params-card">
+          <div class="params-title"><i class="ti ti-database-export"></i> Export des données</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Exporte toutes les inscriptions en format CSV pour les consulter dans Excel.</div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button onclick="exportExcel()" style="display:inline-flex;align-items:center;gap:6px;padding:0.65rem 1.5rem;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;">
+              <i class="ti ti-file-spreadsheet"></i> Télécharger la base de données Excel (3 feuilles)
+            </button>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:0.5rem;">Le fichier contient 3 feuilles : Collaborateurs · Parents · Mises en relation — avec filtres activés</div>
+        </div>
+
+        <div class="params-card" style="border-color:#E24B4A;">
+          <div class="params-title" style="color:#E24B4A;"><i class="ti ti-trash" style="color:#E24B4A;"></i> Zone de danger</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Supprimer définitivement toutes les données de la plateforme.</div>
+          <button onclick="clearAll()" style="display:inline-flex;align-items:center;gap:6px;padding:0.65rem 1.25rem;background:var(--red-light);color:var(--red);border:1px solid var(--red);border-radius:8px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;">
+            <i class="ti ti-trash"></i> Supprimer toutes les données
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="modal-ov" id="modal-ov">
+  <div class="modal">
+    <button class="modal-x" id="modal-x"><i class="ti ti-x"></i></button>
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="modal-acts" id="modal-acts"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, updateDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBFhZcBcozFleCTWMzxTAdRSEm9aCiAM9g",
+  authDomain: "haske-niger.firebaseapp.com",
+  projectId: "haske-niger",
+  storageBucket: "haske-niger.firebasestorage.app",
+  messagingSenderId: "119105461269",
+  appId: "1:119105461269:web:a6c4ca8d87957c0ff3021c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let allC = [], allP = [];
+let selC = null, selP = null;
+let filterCSearch = '', filterCStatus = '', filterPSearch = '', filterPStatus = '';
+let unsubC = null, unsubP = null;
+let adminCreds = { id: localStorage.getItem('haske_admin_id') || 'admin', pw: localStorage.getItem('haske_admin_pw') || '03102002' };
+let matchCount = parseInt(localStorage.getItem('haske_match_count') || '0');
+
+// ── SESSION ADMIN PERSISTANTE ──
+function saveAdminSession() { localStorage.setItem('haske_admin_session', '1'); }
+function clearAdminSession() { localStorage.removeItem('haske_admin_session'); }
+function restoreAdminSession() {
+  if (localStorage.getItem('haske_admin_session') === '1') {
+    document.getElementById('s-login').style.display = 'none';
+    document.getElementById('s-app').style.display = 'block';
+    document.getElementById('new-id').value = adminCreds.id;
+    saveAdminSession();
+    startListeners();
+    return true;
+  }
+  return false;
+}
+window.addEventListener('load', () => { restoreAdminSession(); });
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── LOGIN ──
+document.getElementById('btn-login').addEventListener('click', () => {
+  const id = document.getElementById('l-id').value.trim();
+  const pw = document.getElementById('l-pw').value.trim();
+  const err = document.getElementById('err-login');
+  if (id === adminCreds.id && pw === adminCreds.pw) {
+    err.style.display = 'none';
+    document.getElementById('s-login').style.display = 'none';
+    document.getElementById('s-app').style.display = 'block';
+    document.getElementById('new-id').value = adminCreds.id;
+    saveAdminSession();
+    startListeners();
+  } else {
+    err.style.display = 'block';
+  }
+});
+document.getElementById('l-pw').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btn-login').click(); });
+
+window.doLogout = () => {
+  if (unsubC) unsubC();
+  if (unsubP) unsubP();
+  if (unsubMdp) unsubMdp();
+  if (unsubPreuves) unsubPreuves();
+  clearAdminSession();
+  document.getElementById('s-login').style.display = 'flex';
+  document.getElementById('s-app').style.display = 'none';
+  document.getElementById('l-id').value = '';
+  document.getElementById('l-pw').value = '';
+};
+
+// ── LISTENERS ──
+let allMdp = [];
+let allPreuves = [];
+let unsubMdp = null;
+let unsubPreuves = null;
+
+function startListeners() {
+  unsubC = onSnapshot(collection(db, 'etudiants'), snap => {
+    allC = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAll();
+  }, err => toast('Erreur: ' + err.message));
+  unsubP = onSnapshot(collection(db, 'parents'), snap => {
+    allP = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAll();
+  }, err => toast('Erreur: ' + err.message));
+  unsubMdp = onSnapshot(collection(db, 'demandesMdp'), snap => {
+    allMdp = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMdp();
+    updateBadges();
+  }, err => toast('Erreur: ' + err.message));
+  unsubPreuves = onSnapshot(collection(db, 'preuvesSeances'), snap => {
+    allPreuves = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPreuves();
+    updateBadges();
+  }, err => toast('Erreur: ' + err.message));
+  // Afficher historique mises en relation dès le démarrage
+  setTimeout(renderMatches, 500);
+}
+
+function renderAll() {
+  updateStats();
+  renderHome();
+  renderC();
+  renderP();
+  updateBadges();
+  renderMatches();
+  renderValidation();
+}
+
+function updateStats() {
+  const all = [...allC, ...allP];
+  document.getElementById('st-total').textContent = all.length;
+  document.getElementById('st-attente').textContent = all.filter(u => u.statut === 'attente').length;
+  document.getElementById('st-valides').textContent = all.filter(u => u.statut === 'valide').length;
+  document.getElementById('st-matches').textContent = matchCount;
+}
+
+function updateBadges() {
+  document.getElementById('badge-c').textContent = allC.filter(u => u.statut === 'attente').length;
+  document.getElementById('badge-p').textContent = allP.filter(u => u.statut === 'attente').length;
+  const badgeMdp = document.getElementById('badge-mdp');
+  if (badgeMdp) badgeMdp.textContent = allMdp.filter(m => m.statut === 'attente').length;
+  const badgeValidation = document.getElementById('badge-validation');
+  if (badgeValidation) {
+    let nbAttente = 0;
+    allC.forEach(c => { nbAttente += (c.matieresDetail||[]).filter(md => md.statut === 'attente_validation').length; });
+    badgeValidation.textContent = nbAttente;
+  }
+  const badgePreuves = document.getElementById('badge-preuves');
+  if (badgePreuves) badgePreuves.textContent = allPreuves.length;
+}
+
+// ── MATIÈRES À VALIDER (entretien/test) ──
+function renderValidation() {
+  const tbody = document.getElementById('tbody-validation');
+  const empty = document.getElementById('empty-validation');
+  if (!tbody) return;
+  const lignes = [];
+  allC.forEach(c => {
+    (c.matieresDetail||[]).forEach((md, idx) => {
+      if (md.statut === 'attente_validation') lignes.push({ collab: c, matiere: md.matiere, idx });
+    });
+  });
+  if (!lignes.length) { tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = lignes.map(l => {
+    const estPremiereInscription = l.collab.statut === 'attente';
+    return `<tr>
+      <td style="font-weight:600;">${l.collab.prenom} ${l.collab.nom}</td>
+      <td><span class="badge b-blue">${l.matiere}</span></td>
+      <td><a href="tel:${l.collab.tel}" style="color:var(--green);text-decoration:none;">${l.collab.tel||'—'}</a></td>
+      <td style="font-size:12px;color:var(--text2);">${estPremiereInscription?'Candidature initiale':'Matière ajoutée'}</td>
+      <td><span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> Entretien/Test à programmer</span></td>
+      <td>
+        <button class="ab ab-v" onclick="validerMatiere('${l.collab.id}',${l.idx})"><i class="ti ti-check"></i> Valider</button>
+        <button class="ab ab-r" onclick="refuserMatiere('${l.collab.id}',${l.idx})"><i class="ti ti-x"></i> Refuser</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+window.validerMatiere = async (collabId, idx) => {
+  const c = allC.find(x => x.id === collabId);
+  if (!c) return;
+  const nouveauDetail = [...(c.matieresDetail||[])];
+  nouveauDetail[idx] = { ...nouveauDetail[idx], statut: 'validee' };
+  try {
+    await updateDoc(doc(db,'etudiants',collabId), { matieresDetail: nouveauDetail });
+    toast('Matière validée');
+  } catch(e) { toast('Erreur: '+e.message); }
+};
+window.refuserMatiere = async (collabId, idx) => {
+  const c = allC.find(x => x.id === collabId);
+  if (!c) return;
+  const nouveauDetail = [...(c.matieresDetail||[])];
+  nouveauDetail[idx] = { ...nouveauDetail[idx], statut: 'refusee' };
+  try {
+    await updateDoc(doc(db,'etudiants',collabId), { matieresDetail: nouveauDetail });
+    toast('Matière refusée');
+  } catch(e) { toast('Erreur: '+e.message); }
+};
+
+// ── PREUVES DE SÉANCES ──
+function renderPreuves() {
+  const tbody = document.getElementById('tbody-preuves');
+  const empty = document.getElementById('empty-preuves');
+  if (!tbody) return;
+  const sorted = [...allPreuves].sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  if (!sorted.length) { tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = sorted.map(p => {
+    const envoye = p.createdAt?.seconds ? new Date(p.createdAt.seconds*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const roleLabel = p.auteur === 'collaborateur' ? '<span class="badge b-green">Collaborateur</span>' : '<span class="badge b-blue">Parent</span>';
+    const noteHtml = p.note ? '★'.repeat(p.note) + '☆'.repeat(5-p.note) : '<span style="color:var(--text2);">—</span>';
+    return `<tr>
+      <td style="font-weight:600;">${p.auteurNom||'—'}</td>
+      <td>${roleLabel}</td>
+      <td>${p.dateSeance||'—'}</td>
+      <td>${p.heures||'—'} h</td>
+      <td style="color:var(--amber);">${noteHtml}</td>
+      <td style="font-size:12px;max-width:220px;">${p.commentaire||'<span style="color:var(--text2);">Aucun commentaire</span>'}</td>
+      <td style="font-size:11px;color:var(--text2);">${envoye}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── MOTS DE PASSE OUBLIÉS ──
+function genNewPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let pw = '';
+  for (let i=0;i<8;i++) pw += chars[Math.floor(Math.random()*chars.length)];
+  return pw;
+}
+
+function renderMdp() {
+  const tbody = document.getElementById('tbody-mdp');
+  const empty = document.getElementById('empty-mdp');
+  if (!tbody) return;
+  const sorted = [...allMdp].sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  if (!sorted.length) { tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = sorted.map(m => {
+    const ts = m.createdAt?.seconds ? new Date(m.createdAt.seconds*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const badge = m.statut === 'traite'
+      ? '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;"></i> Traité</span>'
+      : '<span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> En attente</span>';
+    return `<tr>
+      <td style="font-weight:500;">${m.prenom||''} ${m.nom||''}</td>
+      <td style="font-family:monospace;">${m.identifiant||'—'}</td>
+      <td><a href="tel:${m.tel}" style="color:var(--green);text-decoration:none;">${m.tel||'—'}</a></td>
+      <td style="font-size:12px;color:var(--text2);">${ts}</td>
+      <td>${badge}</td>
+      <td>${m.statut!=='traite'?`<button class="ab ab-v" onclick="resetPassword('${m.id}','${m.userColl}','${m.userId}','${(m.prenom||'').replace(/'/g,"\\\\'")}','${m.tel||''}')"><i class="ti ti-key"></i> Générer nouveau mot de passe</button>`:'<span style="font-size:12px;color:var(--text2);">Déjà traité</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.resetPassword = async (mdpRequestId, userColl, userId, prenom, tel) => {
+  const newPw = genNewPassword();
+  try {
+    await updateDoc(doc(db, userColl, userId), { motDePasse: newPw });
+    await updateDoc(doc(db, 'demandesMdp', mdpRequestId), { statut: 'traite', nouveauMdp: newPw });
+    const msg = `Bonjour ${prenom},\n\nVoici ton nouveau mot de passe Haske : ${newPw}\n\nTu peux te connecter avec ton identifiant habituel et ce nouveau mot de passe. Pense à le modifier dans tes Paramètres une fois connecté(e).\n\nL'équipe Haske`;
+    const waUrl = `https://wa.me/${(tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+    toast('Nouveau mot de passe généré et envoyé');
+  } catch(e) { toast('Erreur: ' + e.message); }
+};
+
+function ini(p, n) { return ((p||'?')[0] + (n||'?')[0]).toUpperCase(); }
+function sbadge(s) {
+  if (s==='valide') return '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;"></i> Validé</span>';
+  if (s==='refuse') return '<span class="badge b-red"><i class="ti ti-x" style="font-size:10px;"></i> Refusé</span>';
+  return '<span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> En attente</span>';
+}
+
+async function setStatus(coll, id, statut) {
+  try {
+    await updateDoc(doc(db, coll, id), { statut });
+    toast(statut === 'valide' ? 'Validé ✓' : 'Refusé');
+    closeModal();
+  } catch(e) { toast('Erreur: ' + e.message); }
+}
+window.setStatus = setStatus;
+
+// ── HOME TABLE ──
+function renderHome() {
+  const all = [...allC.map(u=>({...u,_t:'collaborateur'})), ...allP.map(u=>({...u,_t:'parent'}))].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,12);
+  const tbody = document.getElementById('tbody-home');
+  const empty = document.getElementById('empty-home');
+  if (!all.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = all.map(u => `<tr>
+    <td><div style="display:flex;align-items:center;gap:0.6rem;"><div class="av ${u._t==='collaborateur'?'av-g':'av-b'}">${ini(u.prenom,u.nom)}</div><strong>${u.prenom} ${u.nom}</strong></div></td>
+    <td>${u._t==='collaborateur'?'<span class="badge b-green">Collaborateur</span>':'<span class="badge b-blue">Parent</span>'}</td>
+    <td style="font-size:12px;color:var(--text2);">${u.ville||'—'}</td>
+    <td><a href="tel:${u.tel}" style="color:var(--green);text-decoration:none;">${u.tel||'—'}</a></td>
+    <td>${sbadge(u.statut)}</td>
+    <td>
+      ${u.statut==='attente'?`<button class="ab ab-v" onclick="setStatus('${u._t==='collaborateur'?'etudiants':'parents'}','${u.id}','valide')"><i class="ti ti-check"></i></button><button class="ab ab-r" onclick="setStatus('${u._t==='collaborateur'?'etudiants':'parents'}','${u.id}','refuse')"><i class="ti ti-x"></i></button>`:''}
+      <button class="ab ab-w" onclick="openModal('${u._t}','${u.id}')"><i class="ti ti-eye"></i></button>
+    </td>
+  </tr>`).join('');
+}
+
+// ── COLLABORATEURS ──
+function renderC() {
+  const data = allC.filter(u => (!filterCSearch||(u.prenom+' '+u.nom+' '+(u.tel||'')).toLowerCase().includes(filterCSearch))&&(!filterCStatus||u.statut===filterCStatus));
+  const tbody = document.getElementById('tbody-c');
+  const empty = document.getElementById('empty-c');
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = data.map(u => {
+    const ts = u.createdAt?.seconds ? new Date(u.createdAt.seconds*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<tr>
+    <td><div style="display:flex;align-items:center;gap:0.6rem;"><div class="av av-g">${ini(u.prenom,u.nom)}</div><strong>${u.prenom} ${u.nom}</strong></div></td>
+    <td style="font-size:12px;">${u.univ||'—'}</td>
+    <td><span class="badge b-green" style="font-size:10px;">${u.niveau||'—'}</span></td>
+    <td style="font-size:11px;">${(u.niveauxEnseignes||u.matieres||[]).slice(0,2).join(', ')||'—'}</td>
+    <td style="font-size:12px;color:var(--text2);">${u.dispo||'—'}</td>
+    <td><a href="tel:${u.tel}" style="color:var(--green);text-decoration:none;">${u.tel||'—'}</a></td>
+    <td style="font-size:11px;color:var(--text2);">${ts}</td>
+    <td>${sbadge(u.statut)}</td>
+    <td>${u.statut==='attente'?`<button class="ab ab-v" onclick="setStatus('etudiants','${u.id}','valide')"><i class="ti ti-check"></i> Valider</button><button class="ab ab-r" onclick="setStatus('etudiants','${u.id}','refuse')"><i class="ti ti-x"></i></button>`:''}
+    <button class="ab ab-w" onclick="openModal('collaborateur','${u.id}')"><i class="ti ti-eye"></i> Voir</button></td>
+  </tr>`;}).join('');
+}
+window.filterC = v => { filterCSearch = v.toLowerCase(); renderC(); };
+window.filterCs = v => { filterCStatus = v; renderC(); };
+
+// ── PARENTS ──
+function renderP() {
+  const data = allP.filter(u => (!filterPSearch||(u.prenom+' '+u.nom+' '+(u.tel||'')).toLowerCase().includes(filterPSearch))&&(!filterPStatus||u.statut===filterPStatus));
+  const tbody = document.getElementById('tbody-p');
+  const empty = document.getElementById('empty-p');
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = data.map(u => {
+    const ts = u.createdAt?.seconds ? new Date(u.createdAt.seconds*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<tr>
+    <td><div style="display:flex;align-items:center;gap:0.6rem;"><div class="av av-b">${ini(u.prenom,u.nom)}</div><strong>${u.prenom} ${u.nom}</strong></div></td>
+    <td>${u.enfant||'—'}</td>
+    <td><span class="badge b-amber" style="font-size:10px;">${u.classe||'—'}</span></td>
+    <td style="font-size:11px;">${(u.matieres||[]).slice(0,2).join(', ')||'—'}</td>
+    <td style="font-size:12px;color:var(--text2);">${u.dispoEnfant||u.ville||'—'}</td>
+    <td><a href="tel:${u.tel}" style="color:var(--green);text-decoration:none;">${u.tel||'—'}</a></td>
+    <td style="font-size:11px;color:var(--text2);">${ts}</td>
+    <td>${sbadge(u.statut)}</td>
+    <td>${u.statut==='attente'?`<button class="ab ab-v" onclick="setStatus('parents','${u.id}','valide')"><i class="ti ti-check"></i> Valider</button><button class="ab ab-r" onclick="setStatus('parents','${u.id}','refuse')"><i class="ti ti-x"></i></button>`:''}
+    <button class="ab ab-w" onclick="openModal('parent','${u.id}')"><i class="ti ti-eye"></i> Voir</button></td>
+  </tr>`;}).join('');
+}
+window.filterP = v => { filterPSearch = v.toLowerCase(); renderP(); };
+window.filterPs = v => { filterPStatus = v; renderP(); };
+
+// ── NAVIGATION ──
+window.goPage = (id) => {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+  if (id === 'match') { renderMatchPage(); renderMatches(); }
+  if (id === 'validation') renderValidation();
+  if (id === 'preuves') renderPreuves();
+  if (id === 'mdp') renderMdp();
+  if (id === 'stats') renderStats();
+};
+
+// ── MODAL ──
+window.openModal = (type, id) => {
+  const u = type==='collaborateur' ? allC.find(x=>x.id===id) : allP.find(x=>x.id===id);
+  if (!u) return;
+  document.getElementById('modal-title').textContent = u.prenom + ' ' + u.nom;
+  const row = (l,v) => v ? `<div class="drow"><span class="dlbl">${l}</span><span class="dval">${v}</span></div>` : '';
+  let html = '';
+  html += row('Type', type==='collaborateur'?'Collaborateur Haske':'Parent d\'élève');
+  html += row('Téléphone', `<a href="tel:${u.tel}" style="color:var(--green);">${u.tel}</a>`);
+  if (u.email) html += row('Email', u.email);
+  html += row('Ville', u.ville);
+  html += row('Statut', sbadge(u.statut));
+  if (u.identifiant) html += row('Identifiant Haske', `<span style="font-family:monospace;font-weight:600;">${u.identifiant}</span>`);
+
+  if (type==='collaborateur') {
+    html += row('Université', u.univ);
+    html += row('Niveau', u.niveau);
+    html += row('Disponibilités', u.dispo);
+    if ((u.matieresDetail||[]).length) {
+      const matieresStatutHtml = u.matieresDetail.map(md => {
+        const badge = md.statut==='validee' ? '<span class="badge b-green" style="font-size:10px;">Validée</span>'
+          : md.statut==='refusee' ? '<span class="badge b-red" style="font-size:10px;">Refusée</span>'
+          : '<span class="badge b-amber" style="font-size:10px;">À valider</span>';
+        return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:8px;margin-bottom:4px;">${md.matiere} ${badge}</span>`;
+      }).join('');
+      html += row('Matières (statut)', matieresStatutHtml);
+    } else {
+      html += row('Matières', (u.matieres||[]).join(', '));
+    }
+    if(u.motivation) html += row('Motivation', u.motivation);
+  } else {
+    html += row('Enfant', u.enfant);
+    html += row('Classe', u.classe);
+    html += row('Besoin d\'aide en', (u.matieres||[]).join(', '));
+    html += row('Catégorie', u.categorie==='scientifique'?'Scientifique':u.categorie==='litteraire'?'Littéraire':'—');
+    html += row('Tarif mensuel de base', `<strong style="color:var(--green);">${(u.tarifMensuel||0).toLocaleString('fr-FR')} FCFA</strong> (commission Haske 20% : ${Math.round((u.tarifMensuel||0)*0.2).toLocaleString('fr-FR')} FCFA)`);
+    if ((u.matieresSupplementaires||[]).length) {
+      const supHtml = u.matieresSupplementaires.map(ms => `${ms.matiere} (+${(ms.tarif||10000).toLocaleString('fr-FR')} FCFA)`).join(', ');
+      const totalSup = u.matieresSupplementaires.reduce((s,m)=>s+(m.tarif||10000),0);
+      html += row('Matière(s) supplémentaire(s)', supHtml);
+      html += row('Total mensuel facturé', `<strong style="color:var(--blue);">${((u.tarifMensuel||0)+totalSup).toLocaleString('fr-FR')} FCFA</strong>`);
+    }
+  }
+  document.getElementById('modal-body').innerHTML = html;
+  const coll = type==='collaborateur'?'etudiants':'parents';
+  const waMsg = type==='collaborateur'
+    ? `Bonjour ${u.prenom},\n\nL'équipe Haske a bien reçu votre candidature de collaborateur. Voici vos identifiants de connexion :\n\nIdentifiant : ${u.identifiant||'—'}\nMot de passe : ${u.motDePasse||'—'}\n\nVous pouvez modifier ce mot de passe à tout moment depuis vos Paramètres une fois connecté(e).`
+    : `Bonjour ${u.prenom},\n\nL'équipe Haske a bien reçu votre demande de soutien scolaire pour ${u.enfant||'votre enfant'}. Voici vos identifiants de connexion :\n\nIdentifiant : ${u.identifiant||'—'}\nMot de passe : ${u.motDePasse||'—'}\n\nVous pouvez modifier ce mot de passe à tout moment depuis vos Paramètres une fois connecté(e).`;
+  let acts = '';
+  if (u.statut==='attente') {
+    acts += `<button class="bm bm-v" onclick="setStatus('${coll}','${u.id}','valide')"><i class="ti ti-check"></i> Valider</button>`;
+    acts += `<button class="bm bm-r" onclick="setStatus('${coll}','${u.id}','refuse')"><i class="ti ti-x"></i> Refuser</button>`;
+  }
+  acts += `<a href="https://wa.me/${(u.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(waMsg)}" target="_blank" class="bm bm-w"><i class="ti ti-brand-whatsapp"></i> Envoyer identifiants</a>`;
+  document.getElementById('modal-acts').innerHTML = acts;
+  document.getElementById('modal-ov').classList.add('open');
+};
+function closeModal() { document.getElementById('modal-ov').classList.remove('open'); }
+window.closeModal = closeModal;
+document.getElementById('modal-x').addEventListener('click', closeModal);
+document.getElementById('modal-ov').addEventListener('click', e => { if(e.target===document.getElementById('modal-ov')) closeModal(); });
+
+// ── MATCH ──
+function renderMatchPage() {
+  const vc = allC.filter(u=>u.statut==='valide');
+  const vp = allP.filter(u=>u.statut==='valide');
+  selC = null; selP = null;
+  document.getElementById('match-result').style.display='none';
+  document.getElementById('btn-match').disabled = true;
+  const itemStyle = 'background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;cursor:pointer;margin-bottom:0.75rem;transition:all 0.15s;';
+  document.getElementById('match-c-list').innerHTML = vc.length ? vc.map((u,i)=>`<div onclick="selMatch('c',${i})" id="mc-${i}" style="${itemStyle}"><div style="font-size:13px;font-weight:500;">${u.prenom} ${u.nom}</div><div style="font-size:11px;color:var(--text2);margin-top:2px;">${u.univ||''} · ${u.dispo||''}</div><div style="margin-top:6px;">${(u.matieres||[]).map(m=>`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--green-light);color:var(--green-dark);margin-right:3px;">${m}</span>`).join('')}</div></div>`).join('') : '<p style="font-size:13px;color:var(--text2);">Aucun collaborateur validé.</p>';
+  document.getElementById('match-p-list').innerHTML = vp.length ? vp.map((u,i)=>`<div onclick="selMatch('p',${i})" id="mp-${i}" style="${itemStyle}"><div style="font-size:13px;font-weight:500;">${u.prenom} ${u.nom}</div><div style="font-size:11px;color:var(--text2);margin-top:2px;">Enfant : ${u.enfant||'—'} · ${u.classe||''}</div><div style="margin-top:6px;">${(u.matieres||[]).map(m=>`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--amber-light);color:var(--amber-dark);margin-right:3px;">${m}</span>`).join('')}</div></div>`).join('') : '<p style="font-size:13px;color:var(--text2);">Aucun parent validé.</p>';
+}
+window.selMatch = (type, i) => {
+  if (type==='c') { document.querySelectorAll('[id^="mc-"]').forEach(el=>{el.style.borderColor='var(--border)';el.style.background='var(--bg2)';}); const el=document.getElementById('mc-'+i); if(el){el.style.borderColor='var(--green)';el.style.background='var(--green-light)';} selC=i; }
+  else { document.querySelectorAll('[id^="mp-"]').forEach(el=>{el.style.borderColor='var(--border)';el.style.background='var(--bg2)';}); const el=document.getElementById('mp-'+i); if(el){el.style.borderColor='var(--green)';el.style.background='var(--green-light)';} selP=i; }
+  document.getElementById('btn-match').disabled = (selC===null||selP===null);
+};
+window.doMatch = () => {
+  const vc = allC.filter(u=>u.statut==='valide'); const vp = allP.filter(u=>u.statut==='valide');
+  const c = vc[selC], p = vp[selP]; if(!c||!p) return;
+
+  // Message WhatsApp professionnel
+  const msg = `Bonjour ${c.prenom},\n\nL'équipe Haske vous assigne un nouvel élève :\n\nEnfant : ${p.enfant||'—'} (${p.classe||'—'})\nMatières : ${(p.matieres||[]).join(', ')}\nParent : ${p.prenom} ${p.nom} — ${p.tel}\n\nNous vous remercions de contacter la famille dans les meilleurs délais afin de convenir d'une première séance.\n\nBonne séance.`;
+
+  // Sauvegarder mise en relation
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const heureStr = now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  const matchRecord = {
+    collaborateur: c.prenom + ' ' + c.nom,
+    collaborateurPrenom: c.prenom,
+    collaborateurNom: c.nom,
+    parent: p.prenom + ' ' + p.nom,
+    parentPrenom: p.prenom,
+    parentNom: p.nom,
+    enfant: p.enfant || '—',
+    classe: p.classe || '—',
+    matieres: (p.matieres||[]).join(', '),
+    telCollab: c.tel || '—',
+    telParent: p.tel || '—',
+    date: dateStr,
+    heure: heureStr
+  };
+  const matches = JSON.parse(localStorage.getItem('haske_matches_v2') || '[]');
+  matches.unshift(matchRecord);
+  localStorage.setItem('haske_matches_v2', JSON.stringify(matches));
+
+  // Mettre à jour Firebase pour notifier le collaborateur
+  try {
+    updateDoc(doc(db, 'etudiants', c.id), {
+      eleveAssigne: {
+        enfant: p.enfant||'—', classe: p.classe||'—',
+        matieres: (p.matieres||[]).join(', '),
+        parentNom: p.prenom+' '+p.nom, parentTel: p.tel,
+        assigneAt: now.toISOString()
+      }, statut: 'valide'
+    });
+  } catch(e) { console.error(e); }
+
+  document.getElementById('match-sum').textContent = `${c.prenom} ${c.nom} → ${p.enfant||p.prenom} — ${dateStr} à ${heureStr}`;
+  document.getElementById('match-wa').href = `https://wa.me/${(c.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+  document.getElementById('match-result').style.display='block';
+
+  matchCount++; localStorage.setItem('haske_match_count', matchCount);
+  document.getElementById('st-matches').textContent = matchCount;
+  renderMatches();
+  toast('Mise en relation effectuée !');
+};
+
+// ── STATISTIQUES ──
+function renderStats() {
+  const all = [...allC, ...allP];
+  // Villes
+  const villes = {};
+  all.forEach(u => { if(u.ville) villes[u.ville] = (villes[u.ville]||0)+1; });
+  const maxV = Math.max(...Object.values(villes), 1);
+  document.getElementById('stats-villes').innerHTML = Object.entries(villes).sort((a,b)=>b[1]-a[1]).map(([v,n])=>`
+    <div style="margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>${v}</span><span style="font-weight:500;">${n}</span></div>
+      <div style="height:8px;border-radius:4px;background:var(--green);width:${Math.round(n/maxV*100)}%;transition:width 0.5s;"></div>
+    </div>`).join('') || '<p style="font-size:13px;color:var(--text2);">Pas encore de données.</p>';
+  // Matières
+  const mats = {};
+  all.forEach(u => (u.matieres||[]).forEach(m => { mats[m] = (mats[m]||0)+1; }));
+  const maxM = Math.max(...Object.values(mats), 1);
+  document.getElementById('stats-matieres').innerHTML = Object.entries(mats).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([m,n])=>`
+    <div style="margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>${m}</span><span style="font-weight:500;">${n}</span></div>
+      <div style="height:8px;border-radius:4px;background:var(--blue);width:${Math.round(n/maxM*100)}%;transition:width 0.5s;"></div>
+    </div>`).join('') || '<p style="font-size:13px;color:var(--text2);">Pas encore de données.</p>';
+  // Taux
+  const total = all.length || 1;
+  const valides = all.filter(u=>u.statut==='valide').length;
+  const attente = all.filter(u=>u.statut==='attente').length;
+  const refuses = all.filter(u=>u.statut==='refuse').length;
+  document.getElementById('stats-taux').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+      <div style="text-align:center;background:var(--green-light);border-radius:8px;padding:1rem;">
+        <div style="font-size:24px;font-weight:500;color:var(--green);">${Math.round(valides/total*100)}%</div>
+        <div style="font-size:12px;color:var(--green-dark);">Validés (${valides})</div>
+      </div>
+      <div style="text-align:center;background:var(--amber-light);border-radius:8px;padding:1rem;">
+        <div style="font-size:24px;font-weight:500;color:var(--amber);">${Math.round(attente/total*100)}%</div>
+        <div style="font-size:12px;color:var(--amber-dark);">En attente (${attente})</div>
+      </div>
+      <div style="text-align:center;background:var(--red-light);border-radius:8px;padding:1rem;">
+        <div style="font-size:24px;font-weight:500;color:var(--red);">${Math.round(refuses/total*100)}%</div>
+        <div style="font-size:12px;color:var(--red);">Non retenus (${refuses})</div>
+      </div>
+    </div>`;
+}
+
+// ── PARAMÈTRES ──
+window.saveId = () => {
+  const newId = document.getElementById('new-id').value.trim();
+  if (!newId) { toast('Identifiant invalide'); return; }
+  adminCreds.id = newId;
+  localStorage.setItem('haske_admin_id', newId);
+  document.getElementById('s-uname').textContent = newId;
+  document.getElementById('s-av-init').textContent = newId[0].toUpperCase();
+  toast('Identifiant mis à jour ✓');
+};
+
+window.savePw = () => {
+  const old = document.getElementById('old-pw').value;
+  const n1 = document.getElementById('new-pw').value;
+  const n2 = document.getElementById('new-pw2').value;
+  if (old !== adminCreds.pw) { toast('Mot de passe actuel incorrect'); return; }
+  if (n1.length < 6) { toast('Nouveau mot de passe trop court (min. 6 caractères)'); return; }
+  if (n1 !== n2) { toast('Les mots de passe ne correspondent pas'); return; }
+  adminCreds.pw = n1;
+  localStorage.setItem('haske_admin_pw', n1);
+  document.getElementById('old-pw').value = '';
+  document.getElementById('new-pw').value = '';
+  document.getElementById('new-pw2').value = '';
+  toast('Mot de passe mis à jour ✓');
+};
+
+window.updateDisplayName = (val) => {
+  document.getElementById('s-uname').textContent = val || 'Manager';
+  if (val) document.getElementById('s-av-init').textContent = val[0].toUpperCase();
+};
+
+// ── EXPORT EXCEL 3 FEUILLES ──
+window.exportExcel = async () => {
+  try {
+    toast('Préparation du fichier Excel…');
+    const snapC = await getDocs(collection(db, 'etudiants'));
+    const snapP = await getDocs(collection(db, 'parents'));
+    const snapPreuves = await getDocs(collection(db, 'preuvesSeances'));
+    const matches = JSON.parse(localStorage.getItem('haske_matches_v2') || '[]');
+
+    const fmtDate = (ts) => ts?.seconds ? new Date(ts.seconds*1000).toLocaleString('fr-FR') : '—';
+
+    // Feuille 1 — Collaborateurs
+    const collabs = snapC.docs.map(d => {
+      const u = d.data();
+      const matieresStatut = (u.matieresDetail||[]).map(md => `${md.matiere} (${md.statut==='validee'?'Validée':md.statut==='refusee'?'Refusée':'À valider'})`).join(' / ');
+      return {
+        'Prénom': u.prenom||'', 'Nom': u.nom||'', 'Identifiant': u.identifiant||'', 'Téléphone': u.tel||'',
+        'Email': u.email||'', 'Ville': u.ville||'', 'Université': u.univ||'',
+        "Niveau d'études": u.niveau||'', 'Niveaux enseignés': (u.niveauxEnseignes||[]).join(', '),
+        'Matières': (u.matieres||[]).join(', '), 'Statut matières': matieresStatut,
+        'Disponibilités': u.dispo||'', 'Statut profil': u.statut||'attente',
+        "Date d'inscription": fmtDate(u.createdAt)
+      };
+    });
+
+    // Feuille 2 — Parents
+    const parents = snapP.docs.map(d => {
+      const u = d.data();
+      const sup = (u.matieresSupplementaires||[]).map(ms => `${ms.matiere} (+${ms.tarif||10000} FCFA)`).join(' / ');
+      const totalSup = (u.matieresSupplementaires||[]).reduce((s,m)=>s+(m.tarif||10000),0);
+      return {
+        'Prénom': u.prenom||'', 'Nom': u.nom||'', 'Identifiant': u.identifiant||'', 'Téléphone': u.tel||'',
+        'Email': u.email||'', 'Ville': u.ville||'', 'Enfant': u.enfant||'',
+        'Classe': u.classe||'', 'Catégorie': u.categorie==='scientifique'?'Scientifique':u.categorie==='litteraire'?'Littéraire':'',
+        'Matières demandées': (u.matieres||[]).join(', '), 'Tarif mensuel base (FCFA)': u.tarifMensuel||0,
+        'Matières supplémentaires': sup, 'Total mensuel (FCFA)': (u.tarifMensuel||0)+totalSup,
+        "Dispo de l'enfant": u.dispoEnfant||'', 'Statut': u.statut||'attente',
+        "Date d'inscription": fmtDate(u.createdAt)
+      };
+    });
+
+    // Feuille 3 — Mises en relation
+    const misesEnRelation = matches.map(m => ({
+      'Collaborateur': m.collaborateur||'', 'Parent': m.parent||'',
+      'Enfant': m.enfant||'', 'Classe': m.classe||'',
+      'Matières': m.matieres||'', 'Tél collaborateur': m.telCollab||'',
+      'Tél parent': m.telParent||'', 'Date mise en relation': m.date||'',
+      'Heure': m.heure||''
+    }));
+
+    // Feuille 4 — Preuves de séances
+    const preuves = snapPreuves.docs.map(d => {
+      const p = d.data();
+      return {
+        'Auteur': p.auteurNom||'', 'Rôle': p.auteur==='collaborateur'?'Collaborateur':'Parent',
+        'Date du cours': p.dateSeance||'', 'Heures': p.heures||'',
+        'Note (sur 5)': p.note||'', 'Commentaire': p.commentaire||'',
+        'Envoyé le': fmtDate(p.createdAt)
+      };
+    });
+
+    // Créer workbook avec SheetJS
+    const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs');
+    const wb = XLSX.utils.book_new();
+
+    // Fonction pour créer une feuille stylée
+    const makeSheet = (data, sheetName) => {
+      if (!data.length) data = [{}];
+      const ws = XLSX.utils.json_to_sheet(data);
+      // Largeur colonnes auto
+      const cols = Object.keys(data[0]||{}).map(k => ({ wch: Math.max(k.length, 15) }));
+      ws['!cols'] = cols;
+      // Activer autofilter
+      const range = XLSX.utils.decode_range(ws['!ref']||'A1');
+      ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: range.e.c } }) };
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    };
+
+    makeSheet(collabs, 'Haske Collaborateurs');
+    makeSheet(parents, 'Haske Parents');
+    makeSheet(misesEnRelation, 'Haske Mises en relation');
+    makeSheet(preuves, 'Haske Preuves séances');
+
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Haske_Base_Données_${today}.xlsx`);
+    toast('Fichier Excel téléchargé ! ✓');
+  } catch(e) { toast('Erreur export: ' + e.message); console.error(e); }
+};
+
+// Garder pour compatibilité
+window.exportCSV = window.exportExcel;
+
+// ── RENDER HISTORIQUE MATCHES ──
+function renderMatches() {
+  const matches = JSON.parse(localStorage.getItem('haske_matches_v2') || '[]');
+  const tbody = document.getElementById('tbody-matches');
+  const empty = document.getElementById('empty-matches');
+  if (!matches.length) { if(tbody) tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if(empty) empty.style.display='none';
+  if(tbody) tbody.innerHTML = matches.map(m => `<tr>
+    <td style="font-weight:500;">${m.collaborateur||'—'}</td>
+    <td>${m.parent||'—'}</td>
+    <td>${m.enfant||'—'}</td>
+    <td><span class="badge b-green" style="font-size:10px;">${m.classe||'—'}</span></td>
+    <td style="font-size:11px;">${m.matieres||'—'}</td>
+    <td style="font-size:12px;color:var(--text2);">${m.date||'—'}</td>
+    <td style="font-size:12px;color:var(--text2);">${m.heure||'—'}</td>
+  </tr>`).join('');
+}
+
+window.clearAll = async () => {
+  if (!confirm('Supprimer TOUTES les données ? Cette action est irréversible.')) return;
+  try {
+    const snC = await getDocs(collection(db, 'etudiants'));
+    const snP = await getDocs(collection(db, 'parents'));
+    await Promise.all([...snC.docs.map(d=>deleteDoc(doc(db,'etudiants',d.id))), ...snP.docs.map(d=>deleteDoc(doc(db,'parents',d.id)))]);
+    toast('Toutes les données supprimées');
+  } catch(e) { toast('Erreur: ' + e.message); }
+};
+
+</script>
+</body>
+</html>
