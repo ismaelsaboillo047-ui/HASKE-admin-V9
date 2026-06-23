@@ -148,6 +148,7 @@ tbody td { padding:0.85rem 1rem; vertical-align:middle; }
         <div class="nav-item" id="nav-parents" onclick="goPage('parents')"><i class="ti ti-heart"></i> Parents <span class="nav-badge" id="badge-p">0</span></div>
         <div class="nav-item" id="nav-match" onclick="goPage('match')"><i class="ti ti-arrows-exchange"></i> Mise en relation</div>
         <div class="nav-item" id="nav-validation" onclick="goPage('validation')"><i class="ti ti-clipboard-check"></i> Matières à valider <span class="nav-badge" id="badge-validation">0</span></div>
+        <div class="nav-item" id="nav-modifs" onclick="goPage('modifs')"><i class="ti ti-edit"></i> Modifications profil <span class="nav-badge" id="badge-modifs">0</span></div>
         <div class="nav-item" id="nav-preuves" onclick="goPage('preuves')"><i class="ti ti-file-check"></i> Preuves de séances <span class="nav-badge" id="badge-preuves">0</span></div>
         <div class="nav-item" id="nav-mdp" onclick="goPage('mdp')"><i class="ti ti-lock"></i> Mots de passe <span class="nav-badge" id="badge-mdp">0</span></div>
         <div class="nav-item" id="nav-stats" onclick="goPage('stats')"><i class="ti ti-chart-bar"></i> Statistiques</div>
@@ -228,7 +229,10 @@ tbody td { padding:0.85rem 1rem; vertical-align:middle; }
         <div id="match-result" style="display:none;margin-top:1rem;background:var(--green-light);border:1px solid var(--green);border-radius:var(--radius);padding:1.25rem;">
           <div style="font-size:13px;font-weight:500;color:var(--green-dark);margin-bottom:0.5rem;"><i class="ti ti-check"></i> Mis en relation !</div>
           <div style="font-size:12px;margin-bottom:0.75rem;" id="match-sum"></div>
-          <a id="match-wa" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:0.6rem 1.25rem;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;"><i class="ti ti-brand-whatsapp"></i> Contacter le collaborateur sur WhatsApp</a>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <a id="match-wa" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:0.6rem 1.25rem;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;"><i class="ti ti-brand-whatsapp"></i> Message au collaborateur</a>
+            <a id="match-wa-parent" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:0.6rem 1.25rem;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;"><i class="ti ti-brand-whatsapp"></i> Message au parent</a>
+          </div>
         </div>
         <!-- Historique mises en relation -->
         <div style="margin-top:1.5rem;">
@@ -249,6 +253,17 @@ tbody td { padding:0.85rem 1rem; vertical-align:middle; }
           <table><thead><tr><th>Collaborateur</th><th>Matière</th><th>Téléphone</th><th>Type</th><th>Statut</th><th>Actions</th></tr></thead>
           <tbody id="tbody-validation"></tbody></table>
           <div class="empty-t" id="empty-validation" style="display:none;"><i class="ti ti-clipboard-check"></i><p>Aucune matière en attente de validation.</p></div>
+        </div>
+      </div>
+
+      <!-- MODIFICATIONS DE PROFIL (ville/disponibilité) -->
+      <div class="page" id="page-modifs">
+        <div class="page-title">Demandes de modification de profil</div>
+        <div class="page-sub"><span class="live">Changements de ville ou de disponibilité à valider</span></div>
+        <div class="table-card">
+          <table><thead><tr><th>Collaborateur</th><th>Champ modifié</th><th>Ancienne valeur</th><th>Nouvelle valeur</th><th>Demandé le</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="tbody-modifs"></tbody></table>
+          <div class="empty-t" id="empty-modifs" style="display:none;"><i class="ti ti-edit"></i><p>Aucune demande de modification en attente.</p></div>
         </div>
       </div>
 
@@ -425,6 +440,7 @@ window.doLogout = () => {
   if (unsubP) unsubP();
   if (unsubMdp) unsubMdp();
   if (unsubPreuves) unsubPreuves();
+  if (unsubModifs) unsubModifs();
   clearAdminSession();
   document.getElementById('s-login').style.display = 'flex';
   document.getElementById('s-app').style.display = 'none';
@@ -435,8 +451,10 @@ window.doLogout = () => {
 // ── LISTENERS ──
 let allMdp = [];
 let allPreuves = [];
+let allModifs = [];
 let unsubMdp = null;
 let unsubPreuves = null;
+let unsubModifs = null;
 
 function startListeners() {
   unsubC = onSnapshot(collection(db, 'etudiants'), snap => {
@@ -455,6 +473,11 @@ function startListeners() {
   unsubPreuves = onSnapshot(collection(db, 'preuvesSeances'), snap => {
     allPreuves = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderPreuves();
+    updateBadges();
+  }, err => toast('Erreur: ' + err.message));
+  unsubModifs = onSnapshot(collection(db, 'demandesModification'), snap => {
+    allModifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderModifs();
     updateBadges();
   }, err => toast('Erreur: ' + err.message));
   // Afficher historique mises en relation dès le démarrage
@@ -492,7 +515,51 @@ function updateBadges() {
   }
   const badgePreuves = document.getElementById('badge-preuves');
   if (badgePreuves) badgePreuves.textContent = allPreuves.length;
+  const badgeModifs = document.getElementById('badge-modifs');
+  if (badgeModifs) badgeModifs.textContent = allModifs.filter(m => m.statut === 'attente').length;
 }
+
+// ── DEMANDES DE MODIFICATION (ville/disponibilité) ──
+function renderModifs() {
+  const tbody = document.getElementById('tbody-modifs');
+  const empty = document.getElementById('empty-modifs');
+  if (!tbody) return;
+  const sorted = [...allModifs].sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  if (!sorted.length) { tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = sorted.map(m => {
+    const ts = m.createdAt?.seconds ? new Date(m.createdAt.seconds*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const ancienneVal = [m.ancienneValeurVille && m.nouvelleValeurVille!==m.ancienneValeurVille ? `Ville : ${m.ancienneValeurVille||'—'}` : '', m.ancienneValeurDispo && m.nouvelleValeurDispo!==m.ancienneValeurDispo ? `Dispo : ${m.ancienneValeurDispo||'—'}` : ''].filter(Boolean).join(' / ');
+    const nouvelleVal = [m.ancienneValeurVille && m.nouvelleValeurVille!==m.ancienneValeurVille ? `Ville : ${m.nouvelleValeurVille||'—'}` : '', m.ancienneValeurDispo && m.nouvelleValeurDispo!==m.ancienneValeurDispo ? `Dispo : ${m.nouvelleValeurDispo||'—'}` : ''].filter(Boolean).join(' / ');
+    const badge = m.statut === 'valide' ? '<span class="badge b-green">Validée</span>' : m.statut === 'refuse' ? '<span class="badge b-red">Refusée</span>' : '<span class="badge b-amber">En attente</span>';
+    return `<tr>
+      <td style="font-weight:600;">${m.prenom||''} ${m.nom||''}<div style="font-size:11px;color:var(--text2);"><a href="tel:${m.tel}" style="color:var(--green);text-decoration:none;">${m.tel||'—'}</a></div></td>
+      <td>${m.champ||'—'}</td>
+      <td style="font-size:12px;color:var(--text2);">${ancienneVal||'—'}</td>
+      <td style="font-size:12px;font-weight:600;">${nouvelleVal||'—'}</td>
+      <td style="font-size:11px;color:var(--text2);">${ts}</td>
+      <td>${badge}</td>
+      <td>${m.statut==='attente'?`<button class="ab ab-v" onclick="validerModif('${m.id}','${m.userId}','${m.nouvelleValeurVille||''}','${m.nouvelleValeurDispo||''}')"><i class="ti ti-check"></i> Valider</button><button class="ab ab-r" onclick="refuserModif('${m.id}')"><i class="ti ti-x"></i> Refuser</button>`:'<span style="font-size:12px;color:var(--text2);">Déjà traité</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.validerModif = async (modifId, userId, nouvelleVille, nouvelleDispo) => {
+  try {
+    const updates = {};
+    if (nouvelleVille) updates.ville = nouvelleVille;
+    if (nouvelleDispo) updates.dispo = nouvelleDispo;
+    await updateDoc(doc(db,'etudiants',userId), updates);
+    await updateDoc(doc(db,'demandesModification',modifId), { statut:'valide' });
+    toast('Modification validée et appliquée');
+  } catch(e) { toast('Erreur: '+e.message); }
+};
+window.refuserModif = async (modifId) => {
+  try {
+    await updateDoc(doc(db,'demandesModification',modifId), { statut:'refuse' });
+    toast('Modification refusée');
+  } catch(e) { toast('Erreur: '+e.message); }
+};
 
 // ── MATIÈRES À VALIDER (entretien/test) ──
 function renderValidation() {
@@ -705,6 +772,7 @@ window.goPage = (id) => {
   document.getElementById('nav-'+id)?.classList.add('active');
   if (id === 'match') { renderMatchPage(); renderMatches(); }
   if (id === 'validation') renderValidation();
+  if (id === 'modifs') renderModifs();
   if (id === 'preuves') renderPreuves();
   if (id === 'mdp') renderMdp();
   if (id === 'stats') renderStats();
@@ -788,17 +856,21 @@ window.selMatch = (type, i) => {
   else { document.querySelectorAll('[id^="mp-"]').forEach(el=>{el.style.borderColor='var(--border)';el.style.background='var(--bg2)';}); const el=document.getElementById('mp-'+i); if(el){el.style.borderColor='var(--green)';el.style.background='var(--green-light)';} selP=i; }
   document.getElementById('btn-match').disabled = (selC===null||selP===null);
 };
-window.doMatch = () => {
+window.doMatch = async () => {
   const vc = allC.filter(u=>u.statut==='valide'); const vp = allP.filter(u=>u.statut==='valide');
   const c = vc[selC], p = vp[selP]; if(!c||!p) return;
 
-  // Message WhatsApp professionnel
-  const msg = `Bonjour ${c.prenom},\n\nL'équipe Haske vous assigne un nouvel élève :\n\nEnfant : ${p.enfant||'—'} (${p.classe||'—'})\nMatières : ${(p.matieres||[]).join(', ')}\nParent : ${p.prenom} ${p.nom} — ${p.tel}\n\nNous vous remercions de contacter la famille dans les meilleurs délais afin de convenir d'une première séance.\n\nBonne séance.`;
-
-  // Sauvegarder mise en relation
   const now = new Date();
   const dateStr = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
   const heureStr = now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+
+  // Message WhatsApp au COLLABORATEUR
+  const msgCollab = `Bonjour ${c.prenom},\n\nL'équipe Haske vous assigne un nouvel élève :\n\nEnfant : ${p.enfant||'—'} (${p.classe||'—'})\nMatières : ${(p.matieres||[]).join(', ')}\nParent : ${p.prenom} ${p.nom} — ${p.tel}\n\nNous vous remercions de contacter la famille dans les meilleurs délais afin de convenir d'une première séance.\n\nBonne séance.`;
+
+  // Message WhatsApp au PARENT
+  const msgParent = `Bonjour ${p.prenom},\n\nL'équipe Haske vous informe qu'un collaborateur a été assigné pour accompagner ${p.enfant||'votre enfant'} :\n\nCollaborateur : ${c.prenom} ${c.nom}\nMatières : ${(p.matieres||[]).join(', ')}\nContact : ${c.tel||'—'}\n\nLe collaborateur vous contactera dans les meilleurs délais afin de convenir d'une première séance.\n\nCordialement,\nL'équipe Haske`;
+
+  // Sauvegarder mise en relation
   const matchRecord = {
     collaborateur: c.prenom + ' ' + c.nom,
     collaborateurPrenom: c.prenom,
@@ -818,9 +890,9 @@ window.doMatch = () => {
   matches.unshift(matchRecord);
   localStorage.setItem('haske_matches_v2', JSON.stringify(matches));
 
-  // Mettre à jour Firebase pour notifier le collaborateur
+  // Mettre à jour Firebase : eleveAssigne sur le COLLABORATEUR
   try {
-    updateDoc(doc(db, 'etudiants', c.id), {
+    await updateDoc(doc(db, 'etudiants', c.id), {
       eleveAssigne: {
         enfant: p.enfant||'—', classe: p.classe||'—',
         matieres: (p.matieres||[]).join(', '),
@@ -828,16 +900,28 @@ window.doMatch = () => {
         assigneAt: now.toISOString()
       }, statut: 'valide'
     });
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error(e); toast('Erreur mise à jour collaborateur: '+e.message); }
+
+  // Mettre à jour Firebase : eleveAssigne sur le PARENT (manquait, corrigé)
+  try {
+    await updateDoc(doc(db, 'parents', p.id), {
+      eleveAssigne: {
+        collaborateurPrenom: c.prenom, collaborateurNom: c.nom,
+        matieres: (p.matieres||[]).join(', '),
+        telCollab: c.tel, assigneAt: now.toISOString()
+      }, statut: 'valide'
+    });
+  } catch(e) { console.error(e); toast('Erreur mise à jour parent: '+e.message); }
 
   document.getElementById('match-sum').textContent = `${c.prenom} ${c.nom} → ${p.enfant||p.prenom} — ${dateStr} à ${heureStr}`;
-  document.getElementById('match-wa').href = `https://wa.me/${(c.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+  document.getElementById('match-wa').href = `https://wa.me/${(c.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(msgCollab)}`;
+  document.getElementById('match-wa-parent').href = `https://wa.me/${(p.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(msgParent)}`;
   document.getElementById('match-result').style.display='block';
 
   matchCount++; localStorage.setItem('haske_match_count', matchCount);
   document.getElementById('st-matches').textContent = matchCount;
   renderMatches();
-  toast('Mise en relation effectuée !');
+  toast('Mise en relation effectuée ! Envoie les 2 messages WhatsApp.');
 };
 
 // ── STATISTIQUES ──
