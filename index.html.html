@@ -173,6 +173,7 @@ tbody td { padding:0.85rem 1rem; vertical-align:middle; }
           <div class="stat"><div class="num c-green" id="st-valides">—</div><div class="lbl">Validés</div></div>
           <div class="stat"><div class="num c-green" id="st-matches">0</div><div class="lbl">Mises en relation</div></div>
         </div>
+        <div id="alertes-suivi-wrap"></div>
         <div class="table-card">
           <div class="table-toolbar"><div style="font-size:13px;font-weight:500;">Dernières inscriptions</div></div>
           <table><thead><tr><th>Nom</th><th>Type</th><th>Ville</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr></thead>
@@ -441,6 +442,7 @@ window.doLogout = () => {
   if (unsubMdp) unsubMdp();
   if (unsubPreuves) unsubPreuves();
   if (unsubModifs) unsubModifs();
+  if (unsubMatieresParent) unsubMatieresParent();
   clearAdminSession();
   document.getElementById('s-login').style.display = 'flex';
   document.getElementById('s-app').style.display = 'none';
@@ -452,9 +454,11 @@ window.doLogout = () => {
 let allMdp = [];
 let allPreuves = [];
 let allModifs = [];
+let allMatieresParent = [];
 let unsubMdp = null;
 let unsubPreuves = null;
 let unsubModifs = null;
+let unsubMatieresParent = null;
 
 function startListeners() {
   unsubC = onSnapshot(collection(db, 'etudiants'), snap => {
@@ -474,10 +478,16 @@ function startListeners() {
     allPreuves = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderPreuves();
     updateBadges();
+    renderAlertesSuivi();
   }, err => toast('Erreur: ' + err.message));
   unsubModifs = onSnapshot(collection(db, 'demandesModification'), snap => {
     allModifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderModifs();
+    updateBadges();
+  }, err => toast('Erreur: ' + err.message));
+  unsubMatieresParent = onSnapshot(collection(db, 'demandesMatiereParent'), snap => {
+    allMatieresParent = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderValidation();
     updateBadges();
   }, err => toast('Erreur: ' + err.message));
   // Afficher historique mises en relation dès le démarrage
@@ -492,6 +502,7 @@ function renderAll() {
   updateBadges();
   renderMatches();
   renderValidation();
+  renderAlertesSuivi();
 }
 
 function updateStats() {
@@ -511,6 +522,7 @@ function updateBadges() {
   if (badgeValidation) {
     let nbAttente = 0;
     allC.forEach(c => { nbAttente += (c.matieresDetail||[]).filter(md => md.statut === 'attente_validation').length; });
+    nbAttente += allMatieresParent.filter(m => m.statut === 'attente').length;
     badgeValidation.textContent = nbAttente;
   }
   const badgePreuves = document.getElementById('badge-preuves');
@@ -532,24 +544,28 @@ function renderModifs() {
     const ancienneVal = [m.ancienneValeurVille && m.nouvelleValeurVille!==m.ancienneValeurVille ? `Ville : ${m.ancienneValeurVille||'—'}` : '', m.ancienneValeurDispo && m.nouvelleValeurDispo!==m.ancienneValeurDispo ? `Dispo : ${m.ancienneValeurDispo||'—'}` : ''].filter(Boolean).join(' / ');
     const nouvelleVal = [m.ancienneValeurVille && m.nouvelleValeurVille!==m.ancienneValeurVille ? `Ville : ${m.nouvelleValeurVille||'—'}` : '', m.ancienneValeurDispo && m.nouvelleValeurDispo!==m.ancienneValeurDispo ? `Dispo : ${m.nouvelleValeurDispo||'—'}` : ''].filter(Boolean).join(' / ');
     const badge = m.statut === 'valide' ? '<span class="badge b-green">Validée</span>' : m.statut === 'refuse' ? '<span class="badge b-red">Refusée</span>' : '<span class="badge b-amber">En attente</span>';
+    const roleLabel = m.role === 'parent' ? '<span class="badge b-blue" style="font-size:10px;">Parent</span>' : '<span class="badge b-green" style="font-size:10px;">Collaborateur</span>';
     return `<tr>
-      <td style="font-weight:600;">${m.prenom||''} ${m.nom||''}<div style="font-size:11px;color:var(--text2);"><a href="tel:${m.tel}" style="color:var(--green);text-decoration:none;">${m.tel||'—'}</a></div></td>
+      <td style="font-weight:600;">${m.prenom||''} ${m.nom||''}<div style="font-size:11px;">${roleLabel}</div><div style="font-size:11px;color:var(--text2);"><a href="tel:${m.tel}" style="color:var(--green);text-decoration:none;">${m.tel||'—'}</a></div></td>
       <td>${m.champ||'—'}</td>
       <td style="font-size:12px;color:var(--text2);">${ancienneVal||'—'}</td>
       <td style="font-size:12px;font-weight:600;">${nouvelleVal||'—'}</td>
       <td style="font-size:11px;color:var(--text2);">${ts}</td>
       <td>${badge}</td>
-      <td>${m.statut==='attente'?`<button class="ab ab-v" onclick="validerModif('${m.id}','${m.userId}','${m.nouvelleValeurVille||''}','${m.nouvelleValeurDispo||''}')"><i class="ti ti-check"></i> Valider</button><button class="ab ab-r" onclick="refuserModif('${m.id}')"><i class="ti ti-x"></i> Refuser</button>`:'<span style="font-size:12px;color:var(--text2);">Déjà traité</span>'}</td>
+      <td>${m.statut==='attente'?`<button class="ab ab-v" onclick="validerModif('${m.id}','${m.userId}','${m.userColl}','${m.role}','${m.nouvelleValeurVille||''}','${m.nouvelleValeurDispo||''}')"><i class="ti ti-check"></i> Valider</button><button class="ab ab-r" onclick="refuserModif('${m.id}')"><i class="ti ti-x"></i> Refuser</button>`:'<span style="font-size:12px;color:var(--text2);">Déjà traité</span>'}</td>
     </tr>`;
   }).join('');
 }
 
-window.validerModif = async (modifId, userId, nouvelleVille, nouvelleDispo) => {
+window.validerModif = async (modifId, userId, userColl, role, nouvelleVille, nouvelleDispo) => {
   try {
     const updates = {};
     if (nouvelleVille) updates.ville = nouvelleVille;
-    if (nouvelleDispo) updates.dispo = nouvelleDispo;
-    await updateDoc(doc(db,'etudiants',userId), updates);
+    if (nouvelleDispo) {
+      if (role === 'parent') updates.dispoEnfant = nouvelleDispo;
+      else updates.dispo = nouvelleDispo;
+    }
+    await updateDoc(doc(db,userColl,userId), updates);
     await updateDoc(doc(db,'demandesModification',modifId), { statut:'valide' });
     toast('Modification validée et appliquée');
   } catch(e) { toast('Erreur: '+e.message); }
@@ -569,24 +585,40 @@ function renderValidation() {
   const lignes = [];
   allC.forEach(c => {
     (c.matieresDetail||[]).forEach((md, idx) => {
-      if (md.statut === 'attente_validation') lignes.push({ collab: c, matiere: md.matiere, idx });
+      if (md.statut === 'attente_validation') lignes.push({ type:'collaborateur', nom: c.prenom+' '+c.nom, tel: c.tel, matiere: md.matiere, idx, collabId: c.id, estPremiereInscription: c.statut === 'attente' });
     });
+  });
+  allMatieresParent.filter(m => m.statut === 'attente').forEach(m => {
+    lignes.push({ type:'parent', nom: m.prenom+' '+m.nom, tel: m.tel, matiere: m.matiere, demandeId: m.id, enfant: m.enfant, classe: m.classe });
   });
   if (!lignes.length) { tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
   if (empty) empty.style.display = 'none';
   tbody.innerHTML = lignes.map(l => {
-    const estPremiereInscription = l.collab.statut === 'attente';
-    return `<tr>
-      <td style="font-weight:600;">${l.collab.prenom} ${l.collab.nom}</td>
-      <td><span class="badge b-blue">${l.matiere}</span></td>
-      <td><a href="tel:${l.collab.tel}" style="color:var(--green);text-decoration:none;">${l.collab.tel||'—'}</a></td>
-      <td style="font-size:12px;color:var(--text2);">${estPremiereInscription?'Candidature initiale':'Matière ajoutée'}</td>
-      <td><span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> Entretien/Test à programmer</span></td>
-      <td>
-        <button class="ab ab-v" onclick="validerMatiere('${l.collab.id}',${l.idx})"><i class="ti ti-check"></i> Valider</button>
-        <button class="ab ab-r" onclick="refuserMatiere('${l.collab.id}',${l.idx})"><i class="ti ti-x"></i> Refuser</button>
-      </td>
-    </tr>`;
+    if (l.type === 'collaborateur') {
+      return `<tr>
+        <td style="font-weight:600;">${l.nom}<div style="font-size:11px;"><span class="badge b-green" style="font-size:10px;">Collaborateur</span></div></td>
+        <td><span class="badge b-blue">${l.matiere}</span></td>
+        <td><a href="tel:${l.tel}" style="color:var(--green);text-decoration:none;">${l.tel||'—'}</a></td>
+        <td style="font-size:12px;color:var(--text2);">${l.estPremiereInscription?'Candidature initiale':'Matière ajoutée'}</td>
+        <td><span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> Entretien/Test à programmer</span></td>
+        <td>
+          <button class="ab ab-v" onclick="validerMatiere('${l.collabId}',${l.idx})"><i class="ti ti-check"></i> Valider</button>
+          <button class="ab ab-r" onclick="refuserMatiere('${l.collabId}',${l.idx})"><i class="ti ti-x"></i> Refuser</button>
+        </td>
+      </tr>`;
+    } else {
+      return `<tr>
+        <td style="font-weight:600;">${l.nom}<div style="font-size:11px;"><span class="badge b-blue" style="font-size:10px;">Parent</span></div></td>
+        <td><span class="badge b-amber">${l.matiere}</span></td>
+        <td><a href="tel:${l.tel}" style="color:var(--green);text-decoration:none;">${l.tel||'—'}</a></td>
+        <td style="font-size:12px;color:var(--text2);">Matière ajoutée — ${l.enfant||'—'} (${l.classe||'—'})</td>
+        <td><span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> En attente</span></td>
+        <td>
+          <button class="ab ab-v" onclick="validerMatiereParent('${l.demandeId}')"><i class="ti ti-check"></i> Valider</button>
+          <button class="ab ab-r" onclick="refuserMatiereParent('${l.demandeId}')"><i class="ti ti-x"></i> Refuser</button>
+        </td>
+      </tr>`;
+    }
   }).join('');
 }
 
@@ -608,6 +640,27 @@ window.refuserMatiere = async (collabId, idx) => {
   try {
     await updateDoc(doc(db,'etudiants',collabId), { matieresDetail: nouveauDetail });
     toast('Matière refusée');
+  } catch(e) { toast('Erreur: '+e.message); }
+};
+
+window.validerMatiereParent = async (demandeId) => {
+  const demande = allMatieresParent.find(m => m.id === demandeId);
+  if (!demande) return;
+  try {
+    const parentDoc = allP.find(p => p.id === demande.userId);
+    const nouvelleListe = [...(parentDoc?.matieresSupplementaires||[]), { matiere: demande.matiere, tarif: demande.tarif||10000, dateAjout: new Date().toISOString() }];
+    await updateDoc(doc(db,'parents',demande.userId), { matieresSupplementaires: nouvelleListe, demandeMatiereEnCours: '' });
+    await updateDoc(doc(db,'demandesMatiereParent',demandeId), { statut:'valide' });
+    toast('Matière validée et ajoutée à l\'abonnement du parent (+' + (demande.tarif||10000) + ' FCFA/mois)');
+  } catch(e) { toast('Erreur: '+e.message); }
+};
+window.refuserMatiereParent = async (demandeId) => {
+  const demande = allMatieresParent.find(m => m.id === demandeId);
+  if (!demande) return;
+  try {
+    await updateDoc(doc(db,'parents',demande.userId), { demandeMatiereEnCours: '' });
+    await updateDoc(doc(db,'demandesMatiereParent',demandeId), { statut:'refuse' });
+    toast('Demande refusée');
   } catch(e) { toast('Erreur: '+e.message); }
 };
 
@@ -714,7 +767,54 @@ function renderHome() {
   </tr>`).join('');
 }
 
-// ── COLLABORATEURS ──
+// ── ALERTES DE SUIVI (innovation traçabilité) ──
+function renderAlertesSuivi() {
+  const wrap = document.getElementById('alertes-suivi-wrap');
+  if (!wrap) return;
+  const TRENTE_JOURS = 30 * 24 * 60 * 60 * 1000;
+  const maintenant = Date.now();
+
+  const collabsActifs = allC.filter(c => c.eleveAssigne && c.statut === 'valide');
+  const alertes = collabsActifs.filter(c => {
+    const preuvesCollab = allPreuves.filter(p => p.userId === c.id);
+    if (!preuvesCollab.length) {
+      // Aucune déclaration depuis l'assignation
+      const assigneAt = c.eleveAssigne.assigneAt ? new Date(c.eleveAssigne.assigneAt).getTime() : 0;
+      return (maintenant - assigneAt) > TRENTE_JOURS;
+    }
+    const derniere = preuvesCollab.sort((a,b) => new Date(b.envoyeLe) - new Date(a.envoyeLe))[0];
+    return (maintenant - new Date(derniere.envoyeLe).getTime()) > TRENTE_JOURS;
+  });
+
+  if (!alertes.length) { wrap.innerHTML = ''; return; }
+
+  wrap.innerHTML = `
+    <div class="table-card" style="border-color:#E24B4A;margin-bottom:1rem;">
+      <div class="table-toolbar" style="background:#FCEBEB;">
+        <div style="font-size:13px;font-weight:600;color:#E24B4A;display:flex;align-items:center;gap:6px;">
+          <i class="ti ti-alert-triangle"></i> Mises en relation sans activité depuis plus de 30 jours (${alertes.length})
+        </div>
+      </div>
+      <table><thead><tr><th>Collaborateur</th><th>Élève</th><th>Téléphone</th><th>Dernière activité</th><th>Action</th></tr></thead>
+      <tbody>
+        ${alertes.map(c => {
+          const preuvesCollab = allPreuves.filter(p => p.userId === c.id);
+          const derniereActivite = preuvesCollab.length
+            ? new Date(preuvesCollab.sort((a,b)=>new Date(b.envoyeLe)-new Date(a.envoyeLe))[0].envoyeLe).toLocaleDateString('fr-FR')
+            : 'Jamais (depuis assignation)';
+          return `<tr>
+            <td style="font-weight:600;">${c.prenom} ${c.nom}</td>
+            <td>${c.eleveAssigne.enfant||'—'}</td>
+            <td><a href="tel:${c.tel}" style="color:var(--green);text-decoration:none;">${c.tel||'—'}</a></td>
+            <td style="font-size:12px;color:#E24B4A;">${derniereActivite}</td>
+            <td><a href="https://wa.me/${(c.tel||'').replace(/\D/g,'')}" target="_blank" class="ab ab-w"><i class="ti ti-brand-whatsapp"></i> Relancer</a></td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>
+    </div>`;
+}
+
+
 function renderC() {
   const data = allC.filter(u => (!filterCSearch||(u.prenom+' '+u.nom+' '+(u.tel||'')).toLowerCase().includes(filterCSearch))&&(!filterCStatus||u.statut===filterCStatus));
   const tbody = document.getElementById('tbody-c');
@@ -822,6 +922,39 @@ window.openModal = (type, id) => {
     }
   }
   document.getElementById('modal-body').innerHTML = html;
+
+  // ── JOURNAL D'ACTIVITÉ (innovation traçabilité) ──
+  const journal = [];
+  if (u.createdAt?.seconds) journal.push({ t: u.createdAt.seconds, label: 'Inscription sur Haske', icon: 'user-plus', color: 'var(--green)' });
+  (u.matieresDetail||[]).forEach(md => {
+    if (md.statut !== 'attente_validation') journal.push({ t: u.createdAt?.seconds||0, label: `Matière "${md.matiere}" ${md.statut==='validee'?'validée':'refusée'}`, icon: md.statut==='validee'?'check':'x', color: md.statut==='validee'?'var(--green)':'#E24B4A' });
+  });
+  allPreuves.filter(p => p.userId === id).forEach(p => {
+    journal.push({ t: p.createdAt?.seconds||0, label: `Séance déclarée : ${p.dateSeance} (${p.heures}h)${p.note?' — Note '+p.note+'/5':''}`, icon: 'clipboard-check', color: 'var(--blue)' });
+  });
+  allModifs.filter(m => m.userId === id).forEach(m => {
+    journal.push({ t: m.createdAt?.seconds||0, label: `Demande de modification (${m.champ}) — ${m.statut==='valide'?'validée':m.statut==='refuse'?'refusée':'en attente'}`, icon: 'edit', color: 'var(--amber)' });
+  });
+  if (type === 'parent') {
+    allMatieresParent.filter(m => m.userId === id).forEach(m => {
+      journal.push({ t: m.createdAt?.seconds||0, label: `Demande de matière "${m.matiere}" — ${m.statut==='valide'?'validée':m.statut==='refuse'?'refusée':'en attente'}`, icon: 'plus', color: 'var(--amber)' });
+    });
+  }
+  journal.sort((a,b) => b.t - a.t);
+  const journalHtml = journal.length ? journal.map(j => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+      <i class="ti ti-${j.icon}" style="font-size:14px;color:${j.color};margin-top:1px;flex-shrink:0;"></i>
+      <div style="flex:1;">
+        <div style="font-size:12px;">${j.label}</div>
+        <div style="font-size:10px;color:var(--text2);">${j.t ? new Date(j.t*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+      </div>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text2);padding:0.5rem 0;">Aucune activité enregistrée.</div>';
+  document.getElementById('modal-body').innerHTML += `
+    <div style="margin-top:1rem;padding-top:0.75rem;border-top:2px solid var(--border);">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;"><i class="ti ti-history"></i> Journal d'activité</div>
+      <div style="max-height:220px;overflow-y:auto;">${journalHtml}</div>
+    </div>`;
+
   const coll = type==='collaborateur'?'etudiants':'parents';
   const waMsg = type==='collaborateur'
     ? `Bonjour ${u.prenom},\n\nL'équipe Haske a bien reçu votre candidature de collaborateur. Voici vos identifiants de connexion :\n\nIdentifiant : ${u.identifiant||'—'}\nMot de passe : ${u.motDePasse||'—'}\n\nVous pouvez modifier ce mot de passe à tout moment depuis vos Paramètres une fois connecté(e).`
