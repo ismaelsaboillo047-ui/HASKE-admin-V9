@@ -589,7 +589,9 @@ function renderValidation() {
     });
   });
   allMatieresParent.filter(m => m.statut === 'attente').forEach(m => {
-    lignes.push({ type:'parent', nom: m.prenom+' '+m.nom, tel: m.tel, matiere: m.matiere, demandeId: m.id, enfant: m.enfant, classe: m.classe });
+    const matieresAffichees = m.matieres || (m.matiere ? [m.matiere] : []);
+    const tarifTotal = m.tarifTotal || (matieresAffichees.length * (m.tarifParMatiere || m.tarif || 10000));
+    lignes.push({ type:'parent', nom: m.prenom+' '+m.nom, tel: m.tel, matieresList: matieresAffichees, tarifTotal, demandeId: m.id, enfant: m.enfant, classe: m.classe });
   });
   if (!lignes.length) { tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
   if (empty) empty.style.display = 'none';
@@ -609,9 +611,9 @@ function renderValidation() {
     } else {
       return `<tr>
         <td style="font-weight:600;">${l.nom}<div style="font-size:11px;"><span class="badge b-blue" style="font-size:10px;">Parent</span></div></td>
-        <td><span class="badge b-amber">${l.matiere}</span></td>
+        <td>${l.matieresList.map(m=>`<span class="badge b-amber" style="margin-right:3px;">${m}</span>`).join('')}<div style="font-size:11px;color:var(--green);font-weight:600;margin-top:3px;">+${l.tarifTotal.toLocaleString('fr-FR')} FCFA/mois</div></td>
         <td><a href="tel:${l.tel}" style="color:var(--green);text-decoration:none;">${l.tel||'—'}</a></td>
-        <td style="font-size:12px;color:var(--text2);">Matière ajoutée — ${l.enfant||'—'} (${l.classe||'—'})</td>
+        <td style="font-size:12px;color:var(--text2);">Matière(s) ajoutée(s) — ${l.enfant||'—'} (${l.classe||'—'})</td>
         <td><span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> En attente</span></td>
         <td>
           <button class="ab ab-v" onclick="validerMatiereParent('${l.demandeId}')"><i class="ti ti-check"></i> Valider</button>
@@ -648,10 +650,14 @@ window.validerMatiereParent = async (demandeId) => {
   if (!demande) return;
   try {
     const parentDoc = allP.find(p => p.id === demande.userId);
-    const nouvelleListe = [...(parentDoc?.matieresSupplementaires||[]), { matiere: demande.matiere, tarif: demande.tarif||10000, dateAjout: new Date().toISOString() }];
+    const matieresAajouter = demande.matieres || (demande.matiere ? [demande.matiere] : []);
+    const tarifParMatiere = demande.tarifParMatiere || demande.tarif || 10000;
+    const nouvellesEntrees = matieresAajouter.map(m => ({ matiere: m, tarif: tarifParMatiere, dateAjout: new Date().toISOString() }));
+    const nouvelleListe = [...(parentDoc?.matieresSupplementaires||[]), ...nouvellesEntrees];
     await updateDoc(doc(db,'parents',demande.userId), { matieresSupplementaires: nouvelleListe, demandeMatiereEnCours: '' });
     await updateDoc(doc(db,'demandesMatiereParent',demandeId), { statut:'valide' });
-    toast('Matière validée et ajoutée à l\'abonnement du parent (+' + (demande.tarif||10000) + ' FCFA/mois)');
+    const totalAjoute = matieresAajouter.length * tarifParMatiere;
+    toast(`${matieresAajouter.length} matière(s) validée(s) et ajoutée(s) (+${totalAjoute.toLocaleString('fr-FR')} FCFA/mois)`);
   } catch(e) { toast('Erreur: '+e.message); }
 };
 window.refuserMatiereParent = async (demandeId) => {
