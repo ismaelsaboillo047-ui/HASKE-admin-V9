@@ -971,6 +971,9 @@ window.openModal = (type, id) => {
     acts += `<button class="bm bm-r" onclick="setStatus('${coll}','${u.id}','refuse')"><i class="ti ti-x"></i> Refuser</button>`;
   }
   acts += `<a href="https://wa.me/${(u.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(waMsg)}" target="_blank" class="bm bm-w"><i class="ti ti-brand-whatsapp"></i> Envoyer identifiants</a>`;
+  if (u.statut==='refuse' || u.statut==='attente') {
+    acts += `<button class="bm" style="background:#FCEBEB;color:#E24B4A;border:1px solid #E24B4A;" onclick="confirmerSuppression('${coll}','${u.id}','${u.prenom} ${u.nom}')"><i class="ti ti-trash"></i> Supprimer ce profil</button>`;
+  }
   document.getElementById('modal-acts').innerHTML = acts;
   document.getElementById('modal-ov').classList.add('open');
 };
@@ -1137,6 +1140,19 @@ window.updateDisplayName = (val) => {
   if (val) document.getElementById('s-av-init').textContent = val[0].toUpperCase();
 };
 
+// ── SUPPRESSION DE PROFIL ──
+window.confirmerSuppression = (coll, id, nom) => {
+  const ok = window.confirm(`Supprimer définitivement le profil de ${nom} de la base de données ? Cette action est irréversible.`);
+  if (ok) supprimerProfil(coll, id, nom);
+};
+async function supprimerProfil(coll, id, nom) {
+  try {
+    await deleteDoc(doc(db, coll, id));
+    closeModal();
+    toast(`Profil de ${nom} supprimé définitivement.`);
+  } catch(e) { toast('Erreur lors de la suppression : ' + e.message); }
+}
+
 // ── EXPORT EXCEL 3 FEUILLES ──
 window.exportExcel = async () => {
   try {
@@ -1148,35 +1164,44 @@ window.exportExcel = async () => {
 
     const fmtDate = (ts) => ts?.seconds ? new Date(ts.seconds*1000).toLocaleString('fr-FR') : '—';
 
-    // Feuille 1 — Collaborateurs
-    const collabs = snapC.docs.map(d => {
-      const u = d.data();
-      const matieresStatut = (u.matieresDetail||[]).map(md => `${md.matiere} (${md.statut==='validee'?'Validée':md.statut==='refusee'?'Refusée':'À valider'})`).join(' / ');
-      return {
-        'Prénom': u.prenom||'', 'Nom': u.nom||'', 'Identifiant': u.identifiant||'', 'Téléphone': u.tel||'',
-        'Email': u.email||'', 'Ville': u.ville||'', 'Université': u.univ||'',
-        "Niveau d'études": u.niveau||'', 'Niveaux enseignés': (u.niveauxEnseignes||[]).join(', '),
-        'Matières': (u.matieres||[]).join(', '), 'Statut matières': matieresStatut,
-        'Disponibilités': u.dispo||'', 'Statut profil': u.statut||'attente',
-        "Date d'inscription": fmtDate(u.createdAt)
-      };
-    });
+    // Feuille 1 — Collaborateurs VALIDÉS uniquement
+    const collabs = snapC.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => u.statut === 'valide')
+      .map(u => {
+        const matieresValidees = (u.matieresDetail||[]).filter(md => md.statut === 'validee').map(md => md.matiere).join(', ');
+        return {
+          'Prénom': u.prenom||'', 'Nom': u.nom||'', 'Identifiant': u.identifiant||'', 'Téléphone': u.tel||'',
+          'Email': u.email||'', 'Ville': u.ville||'', 'Université': u.univ||'',
+          "Niveau d'études": u.niveau||'', 'Niveaux enseignés': (u.niveauxEnseignes||[]).join(', '),
+          'Matières validées': matieresValidees, 'Disponibilités': u.dispo||'',
+          'Élève assigné': u.eleveAssigne ? u.eleveAssigne.enfant + ' (' + u.eleveAssigne.classe + ')' : '—',
+          "Date d'inscription": fmtDate(u.createdAt)
+        };
+      });
 
-    // Feuille 2 — Parents
-    const parents = snapP.docs.map(d => {
-      const u = d.data();
-      const sup = (u.matieresSupplementaires||[]).map(ms => `${ms.matiere} (+${ms.tarif||10000} FCFA)`).join(' / ');
-      const totalSup = (u.matieresSupplementaires||[]).reduce((s,m)=>s+(m.tarif||10000),0);
-      return {
-        'Prénom': u.prenom||'', 'Nom': u.nom||'', 'Identifiant': u.identifiant||'', 'Téléphone': u.tel||'',
-        'Email': u.email||'', 'Ville': u.ville||'', 'Enfant': u.enfant||'',
-        'Classe': u.classe||'', 'Catégorie': u.categorie==='scientifique'?'Scientifique':u.categorie==='litteraire'?'Littéraire':'',
-        'Matières demandées': (u.matieres||[]).join(', '), 'Tarif mensuel base (FCFA)': u.tarifMensuel||0,
-        'Matières supplémentaires': sup, 'Total mensuel (FCFA)': (u.tarifMensuel||0)+totalSup,
-        "Dispo de l'enfant": u.dispoEnfant||'', 'Statut': u.statut||'attente',
-        "Date d'inscription": fmtDate(u.createdAt)
-      };
-    });
+    // Feuille 2 — Parents VALIDÉS uniquement
+    const parents = snapP.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => u.statut === 'valide')
+      .map(u => {
+        // Matières supplémentaires uniquement celles validées
+        const supValidees = (u.matieresSupplementaires||[]);
+        const sup = supValidees.map(ms => `${ms.matiere} (+${ms.tarif||10000} FCFA)`).join(' / ');
+        const totalSup = supValidees.reduce((s,m)=>s+(m.tarif||10000),0);
+        return {
+          'Prénom': u.prenom||'', 'Nom': u.nom||'', 'Identifiant': u.identifiant||'', 'Téléphone': u.tel||'',
+          'Email': u.email||'', 'Ville': u.ville||'', 'Enfant': u.enfant||'',
+          'Classe': u.classe||'', 'Catégorie': u.categorie==='scientifique'?'Scientifique':u.categorie==='litteraire'?'Littéraire':'',
+          'Matières à l\'inscription': (u.matieres||[]).join(', '),
+          'Tarif base (FCFA)': u.tarifMensuel||0,
+          'Matières supplémentaires validées': sup||'—',
+          'Total mensuel (FCFA)': (u.tarifMensuel||0)+totalSup,
+          "Dispo de l'enfant": u.dispoEnfant||'',
+          'Collaborateur assigné': u.eleveAssigne ? (u.eleveAssigne.collaborateurPrenom||'') + ' ' + (u.eleveAssigne.collaborateurNom||'') : '—',
+          "Date d'inscription": fmtDate(u.createdAt)
+        };
+      });
 
     // Feuille 3 — Mises en relation
     const misesEnRelation = matches.map(m => ({
@@ -1191,6 +1216,7 @@ window.exportExcel = async () => {
     const preuves = snapPreuves.docs.map(d => {
       const p = d.data();
       return {
+        'Référence': p.reference||'—',
         'Auteur': p.auteurNom||'', 'Rôle': p.auteur==='collaborateur'?'Collaborateur':'Parent',
         'Date du cours': p.dateSeance||'', 'Heures': p.heures||'',
         'Note (sur 5)': p.note||'', 'Commentaire': p.commentaire||'',
@@ -1202,14 +1228,11 @@ window.exportExcel = async () => {
     const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs');
     const wb = XLSX.utils.book_new();
 
-    // Fonction pour créer une feuille stylée
     const makeSheet = (data, sheetName) => {
       if (!data.length) data = [{}];
       const ws = XLSX.utils.json_to_sheet(data);
-      // Largeur colonnes auto
-      const cols = Object.keys(data[0]||{}).map(k => ({ wch: Math.max(k.length, 15) }));
+      const cols = Object.keys(data[0]||{}).map(k => ({ wch: Math.max(k.length, 18) }));
       ws['!cols'] = cols;
-      // Activer autofilter
       const range = XLSX.utils.decode_range(ws['!ref']||'A1');
       ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: range.e.c } }) };
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -1222,7 +1245,7 @@ window.exportExcel = async () => {
 
     const today = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `Haske_Base_Données_${today}.xlsx`);
-    toast('Fichier Excel téléchargé ! ✓');
+    toast(`Export réussi : ${collabs.length} collaborateur(s), ${parents.length} parent(s) validé(s). ✓`);
   } catch(e) { toast('Erreur export: ' + e.message); console.error(e); }
 };
 
