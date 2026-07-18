@@ -741,6 +741,7 @@ function ini(p, n) { return ((p||'?')[0] + (n||'?')[0]).toUpperCase(); }
 function sbadge(s) {
   if (s==='valide') return '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;"></i> Validé</span>';
   if (s==='refuse') return '<span class="badge b-red"><i class="ti ti-x" style="font-size:10px;"></i> Refusé</span>';
+  if (s==='desactive') return '<span class="badge" style="background:#FFF3E0;color:#E65100;"><i class="ti ti-user-off" style="font-size:10px;"></i> Désactivé</span>';
   return '<span class="badge b-amber"><i class="ti ti-clock" style="font-size:10px;"></i> En attente</span>';
 }
 
@@ -970,9 +971,15 @@ window.openModal = (type, id) => {
     acts += `<button class="bm bm-v" onclick="setStatus('${coll}','${u.id}','valide')"><i class="ti ti-check"></i> Valider</button>`;
     acts += `<button class="bm bm-r" onclick="setStatus('${coll}','${u.id}','refuse')"><i class="ti ti-x"></i> Refuser</button>`;
   }
+  if (u.statut==='valide') {
+    acts += `<button class="bm" style="background:#FFF3E0;color:#E65100;border:1px solid #E65100;" onclick="desactiverProfil('${coll}','${u.id}','${u.prenom} ${u.nom}')"><i class="ti ti-user-off"></i> Désactiver ce profil</button>`;
+  }
+  if (u.statut==='desactive') {
+    acts += `<button class="bm bm-v" onclick="setStatus('${coll}','${u.id}','valide')"><i class="ti ti-user-check"></i> Réactiver le profil</button>`;
+  }
   acts += `<a href="https://wa.me/${(u.tel||'').replace(/\D/g,'')}?text=${encodeURIComponent(waMsg)}" target="_blank" class="bm bm-w"><i class="ti ti-brand-whatsapp"></i> Envoyer identifiants</a>`;
-  if (u.statut==='refuse' || u.statut==='attente') {
-    acts += `<button class="bm" style="background:#FCEBEB;color:#E24B4A;border:1px solid #E24B4A;" onclick="confirmerSuppression('${coll}','${u.id}','${u.prenom} ${u.nom}')"><i class="ti ti-trash"></i> Supprimer ce profil</button>`;
+  if (u.statut==='refuse' || u.statut==='attente' || u.statut==='desactive') {
+    acts += `<button class="bm" style="background:#FCEBEB;color:#E24B4A;border:1px solid #E24B4A;" onclick="confirmerSuppression('${coll}','${u.id}','${u.prenom} ${u.nom}')"><i class="ti ti-trash"></i> Supprimer définitivement</button>`;
   }
   document.getElementById('modal-acts').innerHTML = acts;
   document.getElementById('modal-ov').classList.add('open');
@@ -1138,6 +1145,21 @@ window.savePw = () => {
 window.updateDisplayName = (val) => {
   document.getElementById('s-uname').textContent = val || 'Manager';
   if (val) document.getElementById('s-av-init').textContent = val[0].toUpperCase();
+};
+
+// ── DÉSACTIVATION DE PROFIL ──
+window.desactiverProfil = async (coll, id, nom) => {
+  const raison = window.prompt(`Raison de la désactivation du profil de ${nom} (optionnel) :`);
+  if (raison === null) return; // annulé
+  try {
+    await updateDoc(doc(db, coll, id), {
+      statut: 'desactive',
+      desactiveAt: new Date().toISOString(),
+      raisonDesactivation: raison || 'Désactivé par l\'équipe Haske'
+    });
+    closeModal();
+    toast(`Profil de ${nom} désactivé.`);
+  } catch(e) { toast('Erreur : ' + e.message); }
 };
 
 // ── SUPPRESSION DE PROFIL ──
